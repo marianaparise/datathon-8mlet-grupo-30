@@ -1,0 +1,34 @@
+# Dados — nunca versionados (baixe via `make data`)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Artefatos de modelo
+models/*
+!models/.gitkeep
+
+# MLflow local
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Ambiente
+.venv/
+venv/
+.env
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+
+# Credenciais Kaggle
+kaggle.json

@@ -151,7 +151,7 @@ o baseline principal é a **regra fixa**, com o melhor braço histórico como co
 
 **Validação da Etapa 3. É o track C.**
 
-- [ ] `src/replay.py`: rejection sampling (Li et al., 2010) sobre o conjunto de teste
+- [ ] `src/replay.py`: rejection sampling (Li et al., WSDM 2011) sobre o conjunto de teste
   - [ ] percorre o log; aceita o evento quando o braço escolhido coincide com o braço registrado
   - [ ] recompensa = `y` observado, nunca estimado
   - [ ] reporta taxa de aceitação e tamanho efetivo da amostra

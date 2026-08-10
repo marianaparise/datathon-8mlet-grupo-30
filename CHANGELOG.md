@@ -12,6 +12,25 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 Próxima: Fase 1 — download da base, EDA e definição do espaço de braços.
 
+### Adicionado
+- `docs/BRIEFING.md` — documento de contexto para membros do time que não acompanharam as decisões:
+  resumo do desafio, explicação do problema de *bandit feedback*, as três formulações avaliadas e o
+  racional da escolha A+C, decisões fechadas, **decisões em aberto** e roteiro de estudo priorizado.
+- Ponteiro para o briefing no topo do `README.md`.
+
+### Corrigido
+- Citação do paper de replay em `README.md` e `docs/PLANO.md`: era "Li et al., 2010", mas
+  `arXiv:1003.5956` é **WSDM 2011** (o preprint é de março de 2010, daí a confusão). O paper de 2010 é
+  o outro, `arXiv:1003.0146`, que introduz o LinUCB. Ambos verificados na fonte.
+
+### Notas
+- Identificado que a base tem download direto e sem credencial no **UCI** (origem real do dataset),
+  sob licença CC BY 4.0. Não conflita com o enunciado: o PDF exige *preservar a referência ao Kaggle*,
+  que é bibliográfica e não obriga o download a passar por lá. Decisão de qual via usar está em aberto.
+- Registrado no briefing o enquadramento teórico da escolha A+C: as opções correspondem aos dois
+  estimadores canônicos de **Off-Policy Evaluation** — Direct Method (A) e Importance Sampling (C) —
+  cuja combinação formal é o **Doubly Robust** (Dudík, Langford & Li, ICML 2011).
+
 ---
 
 ## [0.2.0] — 2026-08-03 — Fase 0: fundação do repositório

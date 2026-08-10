@@ -4,7 +4,10 @@
 
 > 🚧 **Em construção.** O projeto está na Fase 0 de 8 do plano de implementação.
 > As seções de resultados, Golden Set e arquitetura em nuvem serão preenchidas conforme as fases avançam.
-> Plano completo em [`docs/PLANO.md`](docs/PLANO.md).
+>
+> **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
+> decisões tomadas com o racional, decisões em aberto e referências de estudo.
+> Plano de execução em [`docs/PLANO.md`](docs/PLANO.md).
 
 ---
 
@@ -65,7 +68,7 @@ log real → braços de ação
 braço para cada cliente. Isso permite rodar milhares de decisões e medir **regret verdadeiro** contra
 o melhor braço possível.
 
-**C — replay.** Rejection sampling ([Li et al., 2010](https://arxiv.org/abs/1003.5956)) sobre o log
+**C — replay.** Rejection sampling ([Li et al., WSDM 2011](https://arxiv.org/abs/1003.5956)) sobre o log
 real: o evento só conta quando o braço escolhido coincide com o que foi de fato registrado, e a
 recompensa é o `y` observado, nunca estimado. Serve de contraprova para o track A.
 

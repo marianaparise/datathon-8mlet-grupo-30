@@ -13,6 +13,13 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 Próxima: Fase 1 — download da base, EDA e definição do espaço de braços.
 
 ### Adicionado
+- `scripts/download_data.sh` e reescrita do alvo `make data`. Tenta o Kaggle (fonte citada no
+  enunciado) e cai no **UCI** quando não há credencial, tornando o repositório clonável e executável
+  por qualquer pessoa — inclusive pela banca. Ambas as vias passam por verificação **SHA-256**
+  (`74adfc57…afb4d8`), porque duas fontes só servem se entregarem exatamente o mesmo arquivo.
+  O alvo é idempotente e redetecta arquivo corrompido.
+- Proveniência da base documentada no README com dados verificados: 41.188 × 21, separador `;`,
+  conversão global de 11,27% (4.640 `yes` / 36.548 `no`), licença CC BY 4.0.
 - `docs/BRIEFING.md` — documento de contexto para membros do time que não acompanharam as decisões:
   resumo do desafio, explicação do problema de *bandit feedback*, as três formulações avaliadas e o
   racional da escolha A+C, decisões fechadas, **decisões em aberto** e roteiro de estudo priorizado.
@@ -24,9 +31,9 @@ Próxima: Fase 1 — download da base, EDA e definição do espaço de braços.
   o outro, `arXiv:1003.0146`, que introduz o LinUCB. Ambos verificados na fonte.
 
 ### Notas
-- Identificado que a base tem download direto e sem credencial no **UCI** (origem real do dataset),
-  sob licença CC BY 4.0. Não conflita com o enunciado: o PDF exige *preservar a referência ao Kaggle*,
-  que é bibliográfica e não obriga o download a passar por lá. Decisão de qual via usar está em aberto.
+- O zip do UCI contém **zips aninhados** (`bank.zip` e `bank-additional.zip`); o arquivo de interesse
+  está no segundo, junto de `bank-additional-names.txt` com a descrição oficial das colunas.
+- O CSV usa **`;` como separador**, não vírgula. `src/data.py` precisa de `sep=';'`.
 - Registrado no briefing o enquadramento teórico da escolha A+C: as opções correspondem aos dois
   estimadores canônicos de **Off-Policy Evaluation** — Direct Method (A) e Importance Sampling (C) —
   cuja combinação formal é o **Doubly Robust** (Dudík, Langford & Li, ICML 2011).

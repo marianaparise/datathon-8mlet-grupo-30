@@ -33,7 +33,19 @@ eleger um vencedor único — aprende que decisões diferentes servem perfis dif
 equivalente ao `bank-additional-full.csv` do *UCI Bank Marketing Dataset*. Campanhas de telemarketing
 de um banco português, com target binário `y` (assinou depósito a prazo).
 
-<!-- Fase 1: preencher versão, licença, nº de linhas/colunas e tabela de features -->
+| | |
+|---|---|
+| Arquivo | `bank-additional-full.csv` (separador `;`) |
+| Dimensões | 41.188 linhas × 21 colunas |
+| Target | `y` — 4.640 `yes` / 36.548 `no` → **conversão de 11,27%** |
+| Origem | [UCI ML Repository, dataset 222](https://archive.ics.uci.edu/dataset/222/bank+marketing) |
+| Licença | CC BY 4.0 |
+| SHA-256 | `74adfc57…afb4d8` — conferido a cada download por `make data` |
+
+O download é feito por [`scripts/download_data.sh`](scripts/download_data.sh), que tenta o Kaggle e cai
+no UCI quando não há credencial. As duas vias passam pela mesma verificação de integridade.
+
+<!-- Fase 1: tabela de features e estatísticas descritivas saem da EDA -->
 
 **`duration` é descartada.** A coluna registra a duração da ligação, que só é conhecida *depois* do
 desfecho — vazamento temporal explícito. O enunciado a cita nominalmente e a EDA quantifica o efeito.
@@ -104,9 +116,9 @@ make mlflow  # abre a UI do MLflow em http://localhost:5000
 make test    # roda a suíte de testes
 ```
 
-`make data` requer credencial do Kaggle em `~/.kaggle/kaggle.json`
-(Kaggle → *Settings* → *Create New Token*). Sem ela, baixe o zip pelo link acima e extraia em
-`data/raw/`.
+`make data` **não exige credencial**: se houver token do Kaggle em `~/.kaggle/kaggle.json` ele é usado,
+senão o download vem do UCI. Nos dois casos o arquivo é conferido por SHA-256, e o comando é
+idempotente — rodar de novo com o arquivo íntegro não baixa nada.
 
 Via Docker:
 

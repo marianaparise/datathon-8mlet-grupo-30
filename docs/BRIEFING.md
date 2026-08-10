@@ -59,8 +59,9 @@ modelo superando baseline, MLflow, demo funcionando).
 ✅ Estrutura de repositório, `requirements.txt` validado com instalação real, `Makefile`,
 `.gitignore`, README inicial, regras do projeto em [`CLAUDE.md`](../CLAUDE.md).
 
+✅ Download da base automatizado e verificado por checksum — `make data` roda sem credencial.
+
 ❌ **Não existe código ainda.** `src/`, `api/` e `tests/` estão vazios.
-❌ **Não existe dado ainda.** `data/raw/` está vazio.
 
 O primeiro código nasce na Fase 1. Parte do trabalho (políticas, runner, testes, Docker) **não depende
 de dado** e pode começar em paralelo — ver [decisão em aberto #2](#2-por-onde-começar).
@@ -171,16 +172,18 @@ da Etapa 3.
 
 ## 5. Decisões em aberto — precisamos bater martelo
 
-### 1. Como obter a base
-A base está no Kaggle, mas **o download exige credencial** (`~/.kaggle/kaggle.json`), que não está
-configurada. A mesma base está no **UCI**, origem real dela, com download direto sem login e licença
-**CC BY 4.0**: `https://archive.ics.uci.edu/static/public/222/bank+marketing.zip`
+### ~~1. Como obter a base~~ — ✅ **RESOLVIDA**
+`make data` funciona sem credencial nenhuma. O script
+[`scripts/download_data.sh`](../scripts/download_data.sh) tenta o Kaggle e cai no UCI (origem real do
+dataset, CC BY 4.0) quando não há token. As duas vias são conferidas por SHA-256, então nunca se treina
+em cima de um arquivo diferente sem perceber.
 
-Isso não conflita com o enunciado — o PDF manda *preservar a referência ao Kaggle*, o que o README já
-faz. A referência é bibliográfica, não obriga o download a passar por lá.
+Não conflita com o enunciado: o PDF manda *preservar a referência ao Kaggle*, que é bibliográfica — o
+README cita fonte, link e licença. De onde os bytes vêm é detalhe de infraestrutura.
 
-> **Opções:** baixar do UCI · configurar credencial Kaggle · baixar manualmente
-> **Sugestão:** UCI, com `make data` tentando Kaggle primeiro e caindo no UCI como fallback.
+**Se você quiser usar o Kaggle mesmo assim:** gere o token em *Kaggle → Settings → Create New Token*,
+salve em `~/.kaggle/kaggle.json` e rode `chmod 600 ~/.kaggle/kaggle.json`. O script passa a preferi-lo
+automaticamente.
 
 ### 2. Por onde começar
 A Fase 1 (EDA) precisa do CSV. Mas boa parte do código **não depende de dado nenhum**:
@@ -286,12 +289,12 @@ Ordenado por prioridade. **As três primeiras em ~10h já permitem defender a de
 
 ```bash
 make setup   # cria .venv e instala dependências
-make test    # roda a suíte (ainda vazia)
+make data    # baixa a base e confere o SHA-256 (não precisa de credencial)
 make help    # lista todos os alvos
 ```
 
-`make data`, `make train` e `make api` **ainda não funcionam** — dependem de dado e de código que não
-existem. Ver [decisões em aberto #1 e #2](#5-decisões-em-aberto--precisamos-bater-martelo).
+`make train` e `make api` **ainda não funcionam** — dependem de código que não existe.
+Ver [decisão em aberto #2](#2-por-onde-começar).
 
 Stack: Python 3.12, scikit-learn 1.9, pandas 2.3, MLflow 3.15, FastAPI 0.141. Versões pinadas em
 [`requirements.txt`](../requirements.txt), resolvidas a partir de uma instalação real.

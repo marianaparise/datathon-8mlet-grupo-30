@@ -22,16 +22,7 @@ setup:
 	@echo "OK. Ative com: source $(VENV)/bin/activate"
 
 data:
-	@if [ -f "$(RAW)" ]; then \
-		echo "$(RAW) já existe."; \
-	else \
-		echo "Baixando de kaggle.com/datasets/henriqueyamahata/bank-marketing ..."; \
-		$(VENV)/bin/kaggle datasets download -d henriqueyamahata/bank-marketing -p data/raw --unzip \
-		  || (echo ""; \
-		      echo "Falhou. Requer ~/.kaggle/kaggle.json (Kaggle > Settings > Create New Token)."; \
-		      echo "Alternativa manual: baixe o zip do link acima e extraia em data/raw/"; \
-		      exit 1); \
-	fi
+	@./scripts/download_data.sh
 
 train:
 	$(PY) train.py

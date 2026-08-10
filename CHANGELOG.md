@@ -10,9 +10,25 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: Fase 1 — download da base, EDA e definição do espaço de braços.
+Próxima: **Fase 1** — EDA sobre a base já disponível em `data/raw/`, quantificação do vazamento de
+`duration`, checagem do confounding temporal e **definição do espaço de braços** a partir do suporte
+amostral por célula.
+
+Em paralelo, sem dependência de dado: `src/policies.py`, `src/evaluation.py` e a suíte de testes
+(decisão em aberto #2 do `docs/BRIEFING.md`).
+
+---
+
+## [0.3.0] — 2026-08-10 — Briefing do time e automação do download
 
 ### Adicionado
+- `src/config.py` — schema e constantes de reprodutibilidade, sem efeito colateral no import:
+  caminhos, `SEED`, `RAW_SEPARATOR`, e a partição explícita das colunas em
+  `CONTEXT_COLUMNS` (atributos do cliente), `ACTION_COLUMNS` (decisões da campanha, de onde saem os
+  braços), `FORBIDDEN_COLUMNS` (`duration`) e `TARGET`.
+- `src/data.py` — `load_raw()`, `drop_forbidden()` e `binarize_target()`.
+- `tests/test_data.py` — 8 testes cobrindo shape, schema, separador errado, arquivo ausente,
+  imutabilidade do DataFrame original e a taxa de conversão de 11,27%.
 - `scripts/download_data.sh` e reescrita do alvo `make data`. Tenta o Kaggle (fonte citada no
   enunciado) e cai no **UCI** quando não há credencial, tornando o repositório clonável e executável
   por qualquer pessoa — inclusive pela banca. Ambas as vias passam por verificação **SHA-256**
@@ -33,7 +49,10 @@ Próxima: Fase 1 — download da base, EDA e definição do espaço de braços.
 ### Notas
 - O zip do UCI contém **zips aninhados** (`bank.zip` e `bank-additional.zip`); o arquivo de interesse
   está no segundo, junto de `bank-additional-names.txt` com a descrição oficial das colunas.
-- O CSV usa **`;` como separador**, não vírgula. `src/data.py` precisa de `sep=';'`.
+- O CSV usa **`;` como separador**, não vírgula — e ler com o separador padrão do pandas devolve
+  `(41188, 1)` **sem levantar exceção**. Por isso o separador virou constante em `config.py` e
+  `load_raw()` valida o schema depois de ler, em vez de confiar no parse. O arquivo bruto **não** foi
+  convertido: alterar dado cru invalidaria o checksum que acabamos de estabelecer.
 - Registrado no briefing o enquadramento teórico da escolha A+C: as opções correspondem aos dois
   estimadores canônicos de **Off-Policy Evaluation** — Direct Method (A) e Importance Sampling (C) —
   cuja combinação formal é o **Doubly Robust** (Dudík, Langford & Li, ICML 2011).

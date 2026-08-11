@@ -1,0 +1,28 @@
+target-version = "py312"
+line-length = 88
+
+[lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplificações
+    "ANN",  # type hints
+    "D",    # docstrings
+]
+ignore = [
+    "D100",  # docstring de módulo não é obrigatória em todo arquivo
+    "D103",  # testes não precisam de docstring
+    "D203",  # conflita com D211
+    "D213",  # conflita com D212
+    "ANN401",
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["ANN001", "D"]
+"conftest.py" = ["ANN001", "D103"]
+
+[lint.pydocstyle]
+convention = "google"

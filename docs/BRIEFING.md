@@ -54,17 +54,24 @@ modelo superando baseline, MLflow, demo funcionando).
 
 ## 2. Onde estamos
 
-**Fase 0 de 8 concluída.** Plano completo em [`PLANO.md`](PLANO.md).
+**Fases 0 e 1 de 8 concluídas.** Plano completo em [`PLANO.md`](PLANO.md).
 
 ✅ Estrutura de repositório, `requirements.txt` validado com instalação real, `Makefile`,
 `.gitignore`, README inicial, regras do projeto em [`CLAUDE.md`](../CLAUDE.md).
 
 ✅ Download da base automatizado e verificado por checksum — `make data` roda sem credencial.
 
-❌ **Não existe código ainda.** `src/`, `api/` e `tests/` estão vazios.
+✅ **Fase 1** — `src/config.py`, `src/data.py`, `src/eda.py`, `conftest.py`,
+`notebooks/01_eda.ipynb` e 41 testes. Espaço de braços fixado em `contact × week_window`
+(6 braços); decisões em aberto #4, #5 e #6 fechadas.
 
-O primeiro código nasce na Fase 1. Parte do trabalho (políticas, runner, testes, Docker) **não depende
-de dado** e pode começar em paralelo — ver [decisão em aberto #2](#2-por-onde-começar).
+❌ `api/` continua vazio. `src/arms.py`, `src/environment.py`, `src/policies.py`,
+`src/evaluation.py` e `train.py` nascem nas Fases 2 e 3.
+
+**O achado que mais importa daqui para frente:** o braço modal do log é também o de maior
+conversão, e a heterogeneidade braço × contexto é fraca — nenhuma troca de melhor braço entre
+estratos é estatisticamente distinguível. O risco de o bandit empatar com o baseline é real e
+precisa ser atacado no teste de heterogeneidade da Fase 2, não na Fase 3.
 
 ---
 
@@ -185,41 +192,54 @@ README cita fonte, link e licença. De onde os bytes vêm é detalhe de infraest
 salve em `~/.kaggle/kaggle.json` e rode `chmod 600 ~/.kaggle/kaggle.json`. O script passa a preferi-lo
 automaticamente.
 
-### 2. Por onde começar
-A Fase 1 (EDA) precisa do CSV. Mas boa parte do código **não depende de dado nenhum**:
-`src/policies.py` (ε-Greedy, UCB1, Thompson, LinTS são algoritmos puros), `src/evaluation.py`
-(runner e métricas), `api/schemas.py`, `Dockerfile`.
-
-> **Opções:** adiantar a Fase 3 em paralelo · esperar os dados e seguir a ordem do plano
-> **Sugestão:** adiantar as políticas e os testes — é o coração técnico e destrava sozinho.
+### ~~2. Por onde começar~~ — ✅ **RESOLVIDA**
+Seguimos a ordem do plano. A Fase 1 fez EDA e pipeline de preparação; `src/policies.py` e
+`src/evaluation.py` vêm na Fase 3, depois de a Fase 2 fixar o ambiente calibrado.
 
 ### 3. Nome do repositório
-O PDF sugere `datathon-7mlet-grupo-XX` (como exemplo, com "ex:"). O repo atual é
-`tech-challange-5`. Não vejo problema, mas **se a coordenação exigir o padrão, precisamos do número
-do grupo** e de um rename no GitHub.
+O PDF sugere `datathon-7mlet-grupo-XX` (como exemplo, com "ex:"). O repositório já foi renomeado
+para `datathon-8mlet-grupo-30`. **Confirmar com a coordenação se o número da turma é mesmo 8** — o
+exemplo do PDF diz 7.
 
-### 4. Qual baseline usar — **atenção, essa é armadilha**
-O PDF permite escolher entre *regra fixa*, *melhor braço histórico* ou *segmentação inicial*.
+### ~~4. Qual baseline usar~~ — ✅ **RESOLVIDA**
+**A armadilha era real e disparou.** O braço modal do log (`cellular|mid`, 38,8% do volume) é
+*também* o de maior conversão (15,47%): modal e melhor histórico são o mesmo braço. Com "melhor
+braço histórico" como baseline, qualquer bandit não-contextual convergiria para ele e o ganho seria
+exatamente zero.
 
-Se escolhermos **"melhor braço histórico"** e existir um braço globalmente dominante, qualquer bandit
-não-contextual converge exatamente para ele e **o ganho fica em zero** — falhando o requisito explícito
-da Etapa 3 de superar o baseline.
+**Decisão: regra fixa = a política de log**, cuja conversão realizada é 11,27%. Concentrar em
+`cellular|mid` rende 15,47% — uplift de +37%, e legítimo, porque a operação jogava uma mistura, não
+o melhor braço. `BestHistoricalArm` fica como comparador secundário, e é contra ele que só a
+política **contextual** pode ganhar.
 
-> **Sugestão:** **regra fixa** como baseline principal (o que a operação de fato fazia), com melhor
-> braço histórico como comparador secundário. É contra esse segundo que o contextual precisa provar valor.
+⚠️ **Ressalva séria:** a heterogeneidade braço × contexto é fraca. Nas estratificações testadas
+(`job`, `education`, `marital`, `poutcome`), onde o melhor braço muda de identidade os intervalos de
+Wilson dos concorrentes se sobrepõem — nenhuma troca é estatisticamente distinguível. Se a Fase 2
+confirmar isso, o contextual não terá o que ganhar neste espaço de braços e será preciso revisá-lo.
 
-### 5. O que fazer com `euribor3m` e `nr.employed`
-São indicadores macroeconômicos que funcionam como **proxies fortíssimos de calendário**. Sem
-tratamento, o modelo "acerta" pelo momento econômico em vez de pelo perfil do cliente.
+### ~~5. O que fazer com `euribor3m` e `nr.employed`~~ — ✅ **RESOLVIDA**
+Pior do que se supunha: **todos os cinco indicadores macro são constantes dentro do período**. O R²
+contra o índice de período é 1,0000 para `emp.var.rate`, `cons.price.idx`, `cons.conf.idx` e
+`nr.employed`, e 0,9996 para `euribor3m`. Para `cons.price.idx`, cada valor identifica um único
+período — saber o índice é saber a data.
 
-> **Opções:** manter e documentar · remover · destemporalizar (ex.: usar variação em vez de nível)
-> **Decidir na Fase 1, com a EDA na mão.**
+**Decisão: manter na base, separados em `MACRO_COLUMNS`, fora do contexto padrão do ambiente.** Um
+indicador constante no período não personaliza nada: move a taxa-base, não distingue cliente. A
+Fase 2 usa `CLIENT_COLUMNS` por padrão e roda a versão com macro como ablação, então "quanto do
+acerto vem do calendário" vira medida em vez de retórica.
 
-### 6. Split treino/teste
-Aleatório estratificado (mais simples, mais dados úteis) ou temporal (mais honesto para campanha, mas
-sofre com o *distribution shift* dos indicadores socioeconômicos ao longo de 2008–2010)?
+Destemporalizar foi descartado: sem coluna de data, a variação só seria computável sobre a ordem de
+linha — tão temporal quanto o nível, e menos interpretável.
 
-> **Sugestão:** estratificado como principal, temporal como análise de sensibilidade.
+### ~~6. Split treino/teste~~ — ✅ **RESOLVIDA**
+O temporal é implementável (a ordem do arquivo é cronológica: 26 blocos de meses consecutivos em
+41.188 linhas), mas produz **24,5 p.p. de deriva** — conversão de 6,37% no treino contra 30,83% no
+teste. O estratificado fica em 0,014 p.p.
+
+**Decisão: estratificado como principal, por alvo × braço**, seed 42. A estratificação inclui o
+braço porque o ambiente da Fase 2 estima `P(y | contexto, braço)` e precisa dos seis braços
+povoados nos dois folds — o mais magro fica com 596 eventos e 28 conversões no teste. O temporal
+vira análise de sensibilidade na Fase 3.
 
 ### 7. Divisão de trabalho e vídeo
 Quem toca o quê nas Fases 1–7, quem grava o vídeo da Etapa 8, e qual a data-limite interna.

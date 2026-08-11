@@ -26,10 +26,11 @@ joblib==1.5.3
 jupyterlab==4.6.2
 ipykernel==7.3.0
 
-# Testes
+# Testes e estilo
 pytest==9.1.1
 httpx==0.28.1
 httpx2==2.9.1  # exigido pelo TestClient do Starlette nesta versão
+ruff==0.16.2
 
 # Download da base
 kaggle==2.2.4

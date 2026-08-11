@@ -77,24 +77,32 @@ tc5/
 
 **Cobre as Etapas 1 e 2.**
 
-- [ ] Baixar a base e documentar o procedimento no README (link Kaggle, versão, licença)
-- [ ] `notebooks/01_eda.ipynb`:
-  - [ ] perfil geral, tipos, cardinalidade, tratamento de `unknown`
-  - [ ] taxa de conversão global e por segmento
-  - [ ] **taxa de conversão por candidato a braço, com contagem por célula**
-  - [ ] evidência do vazamento de `duration` — justificar o descarte com número, não com citação
-  - [ ] **checagem de confounding temporal**: distribuição de `contact` ao longo de `month`
-  - [ ] comportamento de `euribor3m` e `nr.employed` no tempo
-- [ ] `src/data.py`: pipeline de limpeza determinístico
-  - [ ] descarte de `duration`
-  - [ ] separação explícita entre colunas de **contexto** e colunas de **ação**
-  - [ ] split treino/teste estratificado com seed fixa
+- [x] Baixar a base e documentar o procedimento no README (link Kaggle, versão, licença)
+- [x] `notebooks/01_eda.ipynb`:
+  - [x] perfil geral, tipos, cardinalidade, tratamento de `unknown`
+  - [x] taxa de conversão global e por segmento
+  - [x] **taxa de conversão por candidato a braço, com contagem por célula**
+  - [x] evidência do vazamento de `duration` — justificar o descarte com número, não com citação
+  - [x] **checagem de confounding temporal**: distribuição de `contact` ao longo de `month`
+  - [x] comportamento de `euribor3m` e `nr.employed` no tempo
+- [x] `src/data.py`: pipeline de limpeza determinístico
+  - [x] descarte de `duration`
+  - [x] separação explícita entre colunas de **contexto** e colunas de **ação**
+  - [x] split treino/teste estratificado com seed fixa
 
 **Decisão que sai desta fase:** o espaço de braços definitivo, escolhido pelo suporte amostral
 observado — não antes dele.
 
 **Risco:** granularidade fina demais esvazia células. Mitigação: agregar `day_of_week` em janelas
 (início/meio/fim de semana) e exigir um piso de eventos e de conversões por braço.
+
+**Concluída.** Espaço fixado em `contact × week_window` — 6 braços, o pior com 2.979 eventos e 139
+conversões contra um piso de 1.000 e 100. A agregação de `day_of_week` foi de fato necessária, mas
+não pelo motivo previsto: `contact × day_of_week` também passava no piso, e o que a descartou foi a
+sobreposição dos intervalos de Wilson e a queda do aproveitamento do replay.
+
+Desvio: a análise foi para `src/eda.py`, não para `src/data.py`. `data.py` está no caminho de import
+da API da Fase 6 e não pode arrastar matplotlib para o container.
 
 ---
 

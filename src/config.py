@@ -39,6 +39,17 @@ FORBIDDEN_COLUMNS: tuple[str, ...] = ("duration",)
 # Decisões da campanha, não atributos do cliente. É daqui que saem os braços.
 ACTION_COLUMNS: tuple[str, ...] = ("contact", "month", "day_of_week")
 
+# Indicadores macroeconômicos: iguais para todo cliente contatado no mesmo período.
+# Não personalizam nada — movem a taxa-base. Isolados do resto do contexto para que a
+# Fase 2 possa medir quanto do acerto vem do calendário e quanto vem do perfil.
+MACRO_COLUMNS: tuple[str, ...] = (
+    "emp.var.rate",
+    "cons.price.idx",
+    "cons.conf.idx",
+    "euribor3m",
+    "nr.employed",
+)
+
 # Atributos do cliente e conjuntura: o contexto visto pela política.
 CONTEXT_COLUMNS: tuple[str, ...] = (
     "age",
@@ -57,6 +68,11 @@ CONTEXT_COLUMNS: tuple[str, ...] = (
     "cons.conf.idx",
     "euribor3m",
     "nr.employed",
+)
+
+# O contexto sem os indicadores macro: só o que descreve a pessoa.
+CLIENT_COLUMNS: tuple[str, ...] = tuple(
+    c for c in CONTEXT_COLUMNS if c not in MACRO_COLUMNS
 )
 
 # Ordem exata das colunas no arquivo bruto, usada para validar a leitura.
@@ -84,6 +100,52 @@ RAW_COLUMNS: tuple[str, ...] = (
     "y",
 )
 
+# Valor que o dataset usa para "não coletado". Não é imputado: no bank-marketing
+# ele carrega informação (quem não respondeu converte diferente de quem respondeu).
+UNKNOWN_TOKEN = "unknown"
+
+# `pdays` usa 999 para "nunca contatado antes". É sentinela, não distância: a
+# média da coluna crua é ficção, e um modelo que a trate como número lê 999 dias
+# como "contato muito antigo" em vez de "primeiro contato".
+PDAYS_SENTINEL = 999
+
+# --- Colunas derivadas ---------------------------------------------------
+
+WEEK_WINDOW_COLUMN = "week_window"
+ARM_COLUMN = "arm"
+TARGET_BINARY = "converted"
+FIRST_CONTACT_COLUMN = "first_contact"
+
+# `day_of_week` tem 5 valores; cruzado com `contact` daria 10 células, e cruzado
+# também com `month` daria 100. Agregar em três janelas mantém a semântica de
+# "quando abordar" com suporte amostral por célula.
+WEEK_WINDOWS: dict[str, str] = {
+    "mon": "early",
+    "tue": "mid",
+    "wed": "mid",
+    "thu": "mid",
+    "fri": "late",
+}
+
+# --- Espaço de braços ----------------------------------------------------
+
+# Pisos por braço. 1.000 eventos dão erro-padrão de ~1 p.p. numa CVR de 11%;
+# 100 conversões é o piso para a taxa não oscilar com um punhado de casos.
+MIN_EVENTS_PER_ARM = 1_000
+MIN_CONVERSIONS_PER_ARM = 100
+
+# Avaliados do mais grosso ao mais fino. `month` fica de fora: é o confundidor
+# temporal principal, e cruzá-lo esvaziaria as células.
+ARM_SPACE_CANDIDATES: tuple[tuple[str, ...], ...] = (
+    ("contact",),
+    ("contact", WEEK_WINDOW_COLUMN),
+    ("contact", "day_of_week"),
+)
+
+# Espaço definitivo, escolhido na Fase 1 pelo suporte observado — ver README.
+ARM_COLUMNS: tuple[str, ...] = ("contact", WEEK_WINDOW_COLUMN)
+
 # --- Reprodutibilidade ---------------------------------------------------
 
 SEED = 42
+TEST_SIZE = 0.2

@@ -1,4 +1,4 @@
-.PHONY: help setup data train api mlflow test clean docker-build docker-up docker-down
+.PHONY: help setup data train api mlflow test lint clean docker-build docker-up docker-down
 
 VENV    := .venv
 PY      := $(VENV)/bin/python
@@ -12,6 +12,7 @@ help:
 	@echo "api          sobe a API local em http://localhost:8000/docs"
 	@echo "mlflow       abre a UI do MLflow em http://localhost:5000"
 	@echo "test         roda a suíte de testes"
+	@echo "lint         checa estilo e erros estáticos com ruff"
 	@echo "docker-up    sobe API + MLflow via docker compose"
 	@echo "clean        remove caches e artefatos gerados"
 
@@ -35,6 +36,9 @@ mlflow:
 
 test:
 	$(VENV)/bin/pytest tests/ -v
+
+lint:
+	$(VENV)/bin/ruff check .
 
 docker-build:
 	docker compose build

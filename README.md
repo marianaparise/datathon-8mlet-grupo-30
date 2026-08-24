@@ -507,6 +507,9 @@ Sobe a API em `:8000` e a UI do MLflow em `:5000` — as duas telas da demo.
 | `GET /arms` | O espaço de ações |
 | `GET /docs` | Swagger interativo — é o que aparece no vídeo |
 
+Roteiro da demonstração, com as requisições prontas e as saídas esperadas:
+[`docs/DEMO.md`](docs/DEMO.md). `make demo` executa a sequência passo a passo.
+
 ```bash
 curl -X POST http://localhost:8000/recommend \
   -H 'Content-Type: application/json' \

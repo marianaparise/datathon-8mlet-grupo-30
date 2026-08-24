@@ -14,6 +14,7 @@ help:
 	@echo "test         roda a suíte de testes"
 	@echo "lint         checa estilo e erros estáticos com ruff"
 	@echo "tf-check     roda terraform fmt e validate em infra/"
+	@echo "demo         roteiro da demo do vídeo, passo a passo"
 	@echo "docker-up    sobe API + MLflow via docker compose"
 	@echo "clean        remove caches e artefatos gerados"
 
@@ -41,6 +42,9 @@ test:
 
 lint:
 	$(VENV)/bin/ruff check .
+
+demo:
+	@./scripts/demo.sh
 
 tf-check:
 	cd infra && terraform fmt -check -recursive && terraform validate

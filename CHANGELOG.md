@@ -10,7 +10,24 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: **Fase 8** — vídeo pitch. Última etapa; fica com a Mariana.
+Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
+
+### Adicionado — apoio à Etapa 8
+- `docs/DEMO.md` — roteiro da demonstração com as requisições prontas, a narração sugerida para
+  cada passo e as **saídas capturadas da API rodando**, não escritas à mão.
+- `scripts/demo.sh` e alvo `make demo` — executa os sete passos em sequência, pausando a cada um
+  para narração, e derruba a API ao sair mesmo se a gravação for interrompida.
+
+### Notas — o roteiro
+- O momento mais forte é o cliente B: técnico de 49 anos com 6 ligações prévias faz
+  **`telephone|early` assumir a liderança** e `cellular|mid` — o melhor braço na média — cair para
+  quarto lugar. É o que uma regra fixa nunca faria.
+- **Armadilha sinalizada no roteiro:** para o cliente que já converteu, cinco braços empatam em
+  72,81% e o argmax cai em `telephone|mid`. Recomendar telefone fixo para o melhor cliente da base
+  parece erro grosseiro sem explicação — o documento avisa para explicar o platô da calibração
+  isotônica antes que a banca pergunte.
+- Seeds de exploração escolhidas por verificação, não por chute: com ε=0,05 a maioria não explora.
+  `seed=3` explota, `53` e `65` exploram.
 
 ### Adicionado — Fase 7, arquitetura e governança (Etapa 6)
 - `infra/` — Terraform 1.6+ / AWS `~> 5.60` descrevendo a arquitetura-alvo: ECR, ECS Fargate em duas

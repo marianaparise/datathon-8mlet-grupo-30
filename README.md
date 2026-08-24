@@ -803,7 +803,12 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 ├── reports/figures/      # figuras do notebook e do experimento
 ├── scripts/download_data.sh
 ├── tests/
-├── docs/PLANO.md         # plano de implementação em 8 fases
+├── docs/
+│   ├── PLANO.md          # plano de implementação em 8 fases
+│   ├── BRIEFING.md       # contexto e decisões, para quem entra no projeto
+│   ├── DEMO.md           # roteiro da demonstração do vídeo
+│   ├── Relatorio-Tecnico-TC5-Grupo30.docx   # relatório de 10 páginas
+│   └── Guia-de-Estudo-TC5-Grupo30.docx      # material interno do grupo
 ├── CLAUDE.md             # regras e decisões do projeto
 └── CHANGELOG.md          # histórico de modificações
 ```

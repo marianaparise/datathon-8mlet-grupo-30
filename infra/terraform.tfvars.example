@@ -1,0 +1,17 @@
+# Copie para terraform.tfvars e ajuste. O .tfvars real é gitignored — ele
+# costuma acabar carregando e-mail e detalhes de conta.
+
+aws_region   = "us-east-1"
+project_name = "tc5-bandit"
+environment  = "dev"
+
+# Deixe vazio para não criar tópico SNS nem receber e-mail de alarme.
+alarm_email = ""
+
+# Duas réplicas cobrem a queda de uma AZ. Uma basta para demonstração.
+desired_count = 2
+
+task_cpu    = 512
+task_memory = 1024
+
+image_tag = "latest"

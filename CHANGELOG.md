@@ -10,7 +10,34 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: **Fase 7** — README consolidado e arquitetura-alvo em nuvem (Etapa 6).
+Próxima: **Fase 8** — vídeo pitch. Última etapa; fica com a Mariana.
+
+### Adicionado — Fase 7, arquitetura e governança (Etapa 6)
+- `infra/` — Terraform 1.6+ / AWS `~> 5.60` descrevendo a arquitetura-alvo: ECR, ECS Fargate em duas
+  AZs atrás de ALB com escala automática por CPU, S3 versionado para artefatos, Kinesis Firehose
+  para o log de recompensas, DynamoDB para as posteriores por braço, CloudWatch com alarmes.
+- Seção de arquitetura no README, com diagrama e o racional das escolhas.
+- **Seção de governança** cobrindo as cinco exigências do enunciado: base legal, finalidade,
+  minimização, retenção e humano no loop.
+
+### Notas — decisões de infraestrutura
+- **Sem NAT Gateway.** Tasks em sub-rede pública com IP público, protegidas por security group que
+  só aceita tráfego do ALB. Um NAT custaria ~32 USD/mês por AZ para servir apenas o pull da imagem.
+  Documentado que em produção a escolha se inverte.
+- **Dois papéis IAM com escopos distintos.** O da aplicação lê o modelo do S3 mas não escreve — quem
+  publica modelo é o pipeline de treino — e só tem `PutRecord` no Firehose, sem reler o log.
+- **Alarme de queda de conversão**, além dos de infraestrutura. CPU e latência ficam perfeitas
+  enquanto a política recomenda o braço errado para todo mundo; só essa métrica percebe. Fica em
+  `INSUFFICIENT_DATA` até o ciclo de feedback existir, com `treat_missing_data = "missing"` para não
+  virar alarme falso.
+- Firehose com DynamoDB é exatamente a peça que falta para o `?explore=true` da API deixar de ser
+  sem estado. A infraestrutura está desenhada; a aplicação ainda não a usa.
+
+### Verificado — e o que não foi
+- ⚠️ **O Terraform não foi validado nem aplicado.** Não havia binário do Terraform na máquina de
+  desenvolvimento, então `terraform validate` e `terraform fmt` não rodaram. Registrado como
+  pendência no README em vez de apresentado como testado.
+- `.gitignore` cobre `*.tfvars`, `*.tfstate*` e `.terraform/`, preservando o `.tfvars.example`.
 
 ### Adicionado — Fase 6, o serviço (Etapa 5)
 - `api/app.py` e `api/schemas.py` — `POST /recommend` devolvendo o ranking dos seis braços,

@@ -16,7 +16,7 @@ Decisões e restrições em `CLAUDE.md`.
 | 4 ✅ | Replay sobre o log real | validação da Etapa 3 |
 | 5 ✅ | Métricas e Golden Set | Etapa 4 |
 | 6 ✅ | API e Docker | Etapa 5 |
-| 7 | README consolidado e arquitetura em nuvem | Etapas 0, 1, 6 |
+| 7 ✅ | README consolidado e arquitetura em nuvem | Etapas 0, 1, 6 |
 | 8 | Vídeo pitch | Etapa 8 |
 
 ---
@@ -207,19 +207,19 @@ o baseline principal é a **regra fixa**, com o melhor braço histórico como co
 
 **Cobre as Etapas 0, 1 e 6. É onde os 30% de negócio são ganhos ou perdidos.**
 
-- [ ] Problema de negócio e por que bandit em vez de A/B
-- [ ] Link da base no Kaggle, versão, licença, colunas, target
-- [ ] Formulação: o que é um braço aqui e por que essa escolha
-- [ ] Resultados: tabela comparativa e curvas de regret
-- [ ] Golden Set
-- [ ] Instruções de execução local — precisam funcionar em máquina limpa
-- [ ] **Arquitetura-alvo em nuvem**, 1–2 parágrafos (diagrama opcional): S3 para dados, ECR + ECS
+- [x] Problema de negócio e por que bandit em vez de A/B
+- [x] Link da base no Kaggle, versão, licença, colunas, target
+- [x] Formulação: o que é um braço aqui e por que essa escolha
+- [x] Resultados: tabela comparativa e curvas de regret
+- [x] Golden Set
+- [x] Instruções de execução local — precisam funcionar em máquina limpa
+- [x] **Arquitetura-alvo em nuvem**, 1–2 parágrafos (diagrama opcional): S3 para dados, ECR + ECS
       Fargate para a API, Kinesis Firehose para o log de recompensas, DynamoDB para o estado dos
       braços, MLflow gerenciado, CloudWatch para observabilidade
-- [ ] **Governança**: base legal, finalidade, minimização, retenção, humano no loop
-- [ ] **Limitações**, sem maquiagem: viés do log histórico, confounding temporal de `contact`,
+- [x] **Governança**: base legal, finalidade, minimização, retenção, humano no loop
+- [x] **Limitações**, sem maquiagem: viés do log histórico, confounding temporal de `contact`,
       ambiente calibrado não é tráfego real, replay com política de log não aleatória
-- [ ] Parágrafo de roadmap: o motor é agnóstico ao espaço de ações; migrar para catálogo de produtos
+- [x] Parágrafo de roadmap: o motor é agnóstico ao espaço de ações; migrar para catálogo de produtos
       exige log de recompensa por produto, que esta base não tem
 
 ---

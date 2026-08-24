@@ -2,9 +2,8 @@
 
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
-> 🚧 **Em construção.** O projeto está na Fase 6 de 8 do plano de implementação.
-> Etapas 0 a 5 e 7 do enunciado entregues; faltam a arquitetura em nuvem (Etapa 6) e o vídeo
-> (Etapa 8).
+> 🚧 **Em construção.** O projeto está na Fase 7 de 8 do plano de implementação.
+> **Etapas 0 a 7 do enunciado entregues.** Falta o vídeo pitch (Etapa 8).
 >
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
 > decisões tomadas com o racional, decisões em aberto e referências de estudo.
@@ -575,13 +574,118 @@ loop de reinício — bem mais fácil de diagnosticar que um container reinician
 
 ## Arquitetura-alvo em nuvem
 
-<!-- Fase 7: 1 a 2 parágrafos (Etapa 6) -->
-_A preencher._
+A imagem da Etapa 5 vai para o **ECR** e roda em **ECS Fargate** atrás de um **Application Load
+Balancer**, com duas réplicas em zonas de disponibilidade diferentes e escala automática por CPU —
+o custo por requisição aqui é o `predict_proba` dos seis braços, então é CPU que ela consome.
+Fargate em vez de EC2 porque não há o que administrar num serviço sem estado; em vez de Lambda
+porque a imagem carrega scikit-learn e um artefato de ~4 MB, e o *cold start* estragaria justamente
+a demonstração. O **S3** guarda dataset tratado, ambiente calibrado e runs do MLflow, com
+versionamento ligado para permitir voltar a um modelo anterior sem retreinar. Logs e métricas vão
+para o **CloudWatch**.
+
+A parte que não é infraestrutura genérica é **o caminho de volta**. Cada decisão servida e o
+desfecho observado são publicados num **Kinesis Firehose** que entrega no S3 particionado por dia, e
+as posteriores Beta de cada braço vivem numa tabela **DynamoDB** — é isso que falta para o
+`?explore=true` da API deixar de ser sem estado e o bandit passar a aprender de verdade em produção.
+Junto vem um alarme que nenhuma API comum tem: **queda da conversão observada** abaixo da taxa-base
+histórica. CPU e latência podem estar perfeitas enquanto a política recomenda o braço errado para
+todo mundo, e é só essa métrica que percebe.
+
+```
+                    ┌──────────────┐
+   cliente ────────▶│     ALB      │
+                    └──────┬───────┘
+                           ▼
+                  ┌────────────────┐      ┌─────────────┐
+                  │  ECS Fargate   │◀─────│     ECR     │
+                  │  (2 AZs, auto) │      └─────────────┘
+                  └───┬────────┬───┘
+            modelo    │        │   decisão + desfecho
+                      ▼        ▼
+             ┌────────────┐  ┌──────────┐     ┌──────────────┐
+             │  S3        │  │ DynamoDB │     │   Firehose   │
+             │ artefatos  │  │ posterior│     │  recompensas │
+             └────────────┘  │ por braço│     └──────┬───────┘
+                             └──────────┘            ▼
+                                              ┌────────────┐
+                                              │  S3 log    │
+                                              │ (180 dias) │
+                                              └────────────┘
+                    CloudWatch: logs, métricas, alarmes
+```
+
+**A infraestrutura está escrita como código**, em [`infra/`](infra) — Terraform 1.6+, provider AWS
+`~> 5.60`. Vai além do que o enunciado pede (1 a 2 parágrafos); serve para que as escolhas acima
+sejam verificáveis em vez de afirmadas.
+
+```bash
+cd infra
+cp terraform.tfvars.example terraform.tfvars
+terraform init && terraform plan
+```
+
+> ⚠️ **Não foi aplicado nem validado.** `terraform validate` e `terraform fmt` ainda não rodaram —
+> não havia Terraform instalado na máquina de desenvolvimento. E `terraform apply` cria recursos
+> cobrados (ALB e NAT são os caros). Trate como desenho revisável, não como infraestrutura testada.
+
+Três decisões que valem explicação:
+
+- **Sem NAT Gateway.** As tasks ficam em sub-rede pública com IP público, e quem protege é o
+  security group: a porta da aplicação só aceita tráfego vindo do ALB. Um NAT custaria ~32 USD/mês
+  por AZ para servir apenas o *pull* da imagem. Em produção a escolha se inverte — sub-redes
+  privadas com VPC endpoints, sem IP público em task nenhuma.
+- **Dois papéis IAM com escopos distintos.** O de execução só puxa imagem e escreve log. O da
+  aplicação lê o modelo do S3 mas **não escreve** — quem publica modelo é o pipeline de treino — e
+  só tem `PutRecord` no Firehose, sem permissão para reler o log de recompensas.
+- **Circuit breaker com rollback** no deploy, e `minimum_healthy_percent = 100`: a versão antiga só
+  sai depois de a nova passar no health check.
 
 ## Governança
 
-<!-- Fase 7: base legal, finalidade, minimização, retenção, humano no loop -->
-_A preencher._
+O enunciado exige tratar base legal, finalidade, minimização, retenção e humano no loop. As cinco,
+na ordem.
+
+**Base legal.** Os dados usados aqui são públicos, de pesquisa acadêmica, sob **CC BY 4.0** — não há
+titular a quem responder no escopo deste trabalho. Num sistema real com clientes reais, a base legal
+seria **legítimo interesse** (LGPD, art. 7º, IX) para otimização de canal de contato, com **teste de
+proporcionalidade documentado** e oposição garantida — e mudaria para **consentimento** (art. 7º, I)
+para qualquer contato de marketing ativo.
+
+**Finalidade.** Uma só, declarada: **decidir por qual canal e em que janela abordar um cliente já
+elegível**. O sistema não decide *se* alguém é elegível, não pontua risco de crédito e não define
+preço. Reaproveitar estes modelos para negar produto ou precificar seria desvio de finalidade.
+
+**Minimização.** O contexto usa **12 colunas**, e cada exclusão tem motivo registrado:
+
+| Fora | Por quê |
+|---|---|
+| `duration` | Vazamento temporal — só existe depois do desfecho. Proibida pelo enunciado |
+| Indicadores macro | Carimbo de calendário (R² = 1,0000 contra o período); movem a taxa-base sem distinguir cliente |
+| Gênero, raça, renda, patrimônio | **Não estão no dataset, e não entrariam.** Proibidos pelo enunciado |
+| Identificadores | Inexistentes na base. A API não recebe nome, CPF, telefone ou e-mail |
+
+O contrato da API é a fronteira: [`api/schemas.py`](api/schemas.py) só aceita os 11 campos que
+alimentam a decisão. Não há campo livre por onde um identificador possa entrar de carona.
+
+**Retenção.** O log de recompensas — decisão servida e desfecho observado — expira em **180 dias**
+por regra de ciclo de vida do S3 (`reward_retention_days`). O prazo vem da finalidade: é a janela
+necessária para reavaliar uma política e detectar deriva. Guardar além disso seria acúmulo sem uso.
+Logs de aplicação ficam 30 dias. Artefatos de modelo são versionados sem expiração, porque
+reproduzir uma decisão passada exige o modelo que a produziu.
+
+**Humano no loop.** A recomendação é **sugestão de canal**, nunca ação automática sobre o cliente —
+quem liga é a operação, e ela pode ignorar. Três salvaguardas concretas:
+
+1. A resposta traz `is_tie`, e nos empates a orientação explícita é decidir por custo de canal, não
+   pelo modelo. O sistema **admite quando não sabe**.
+2. O alarme de queda de conversão dispara para um humano, não para um *rollback* automático de
+   política — degradação de modelo pede diagnóstico, não reação reflexa.
+3. Frequência de contato continua sendo regra de negócio, fora do modelo. Nada aqui autoriza ligar
+   mais vezes para quem já recusou.
+
+**O que este sistema não faz, e é bom que não faça.** Não decide elegibilidade, não recusa produto,
+não precifica e não gera texto para o cliente. O espaço de ação são **seis combinações de canal e
+janela** — o dano possível de uma recomendação errada é uma ligação em horário ruim.
 
 ## A limitação principal: quanto do efeito de canal é calendário?
 
@@ -687,6 +791,7 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 ├── Dockerfile            # multi-stage, 508 MB, usuário sem privilégios
 ├── docker-compose.yml    # API + UI do MLflow
 ├── requirements-api.txt  # runtime do serviço — 9 pacotes, não 17
+├── infra/                # Terraform da arquitetura-alvo (não aplicado)
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento
 ├── scripts/download_data.sh

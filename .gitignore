@@ -32,3 +32,12 @@ venv/
 
 # Credenciais Kaggle
 kaggle.json
+
+# Terraform
+infra/.terraform/
+infra/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log

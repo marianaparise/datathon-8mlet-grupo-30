@@ -12,6 +12,14 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
 
+### Adicionado — documentos
+- `reports/Relatorio-Tecnico-TC5-Grupo30.docx` — relatório técnico em **10 páginas exatas**:
+  problema de negócio, formulação dos braços, método de avaliação em duas camadas, resultados,
+  Golden Set, engenharia, limitações e governança. Paginação conferida por renderização.
+- `reports/Guia-de-Estudo-TC5-Grupo30.docx` — 9 páginas, material interno: o que é uma política,
+  por que a base não tinha braços, as seis políticas explicadas uma a uma, como ler cada número do
+  projeto, e as perguntas difíceis da banca com a resposta de cada uma.
+
 ### Adicionado — apoio à Etapa 8
 - `docs/DEMO.md` — roteiro da demonstração com as requisições prontas, a narração sugerida para
   cada passo e as **saídas capturadas da API rodando**, não escritas à mão.

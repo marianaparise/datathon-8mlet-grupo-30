@@ -13,6 +13,15 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 Próxima: **Fase 4** — `src/replay.py`, rejection sampling sobre o log real como contraprova do
 ambiente calibrado, com ponderação IPS e comparação do ranking de políticas entre os dois tracks.
 
+### Decidido
+- **Nome do repositório: `datathon-8mlet-grupo-30`** — turma 8MLET, grupo 30. O `7mlet` do enunciado
+  era exemplo, não exigência. Fecha a decisão em aberto #3 do briefing; restam a #7 (divisão de
+  trabalho e vídeo) e a #8 (o que fazer com a política contextual).
+
+### Alterado
+- `git remote` local atualizado para a URL nova. O GitHub redirecionava o nome antigo, então tudo
+  funcionava, mas todo push imprimia `This repository moved`.
+
 ---
 
 ## [0.5.0] — 2026-08-24 — Fases 2 e 3: ambiente calibrado, políticas e o experimento

@@ -199,6 +199,10 @@ da Etapa 3.
 
 ## 5. Decisões em aberto — precisamos bater martelo
 
+**6 das 8 fechadas.** Restam a **#7** (divisão de trabalho das Fases 4–7 e o vídeo) e a **#8**
+(o que fazer com a política contextual). As resolvidas ficam registradas com o racional — quem
+chegar depois precisa saber por que, não só o quê.
+
 ### ~~1. Como obter a base~~ — ✅ **RESOLVIDA**
 `make data` funciona sem credencial nenhuma. O script
 [`scripts/download_data.sh`](../scripts/download_data.sh) tenta o Kaggle e cai no UCI (origem real do
@@ -216,10 +220,20 @@ automaticamente.
 Seguimos a ordem do plano. A Fase 1 fez EDA e pipeline de preparação; `src/policies.py` e
 `src/evaluation.py` vêm na Fase 3, depois de a Fase 2 fixar o ambiente calibrado.
 
-### 3. Nome do repositório
-O PDF sugere `datathon-7mlet-grupo-XX` (como exemplo, com "ex:"). O repositório já foi renomeado
-para `datathon-8mlet-grupo-30`. **Confirmar com a coordenação se o número da turma é mesmo 8** — o
-exemplo do PDF diz 7.
+### ~~3. Nome do repositório~~ — ✅ **RESOLVIDA**
+**`datathon-8mlet-grupo-30`** — turma 8MLET, grupo 30. O `7mlet` do PDF era só exemplo (aparece
+como "ex:"), e a turma confirmada é a 8.
+
+```
+https://github.com/marianaparise/datathon-8mlet-grupo-30
+```
+
+⚠️ **Doglas: rode isto no seu clone.** O GitHub redireciona o nome antigo, então tudo funciona, mas
+o aviso `This repository moved` aparece a cada push até você atualizar:
+
+```bash
+git remote set-url origin https://github.com/marianaparise/datathon-8mlet-grupo-30.git
+```
 
 ### ~~4. Qual baseline usar~~ — ✅ **RESOLVIDA**
 **A armadilha era real e disparou.** O braço modal do log (`cellular|mid`, 38,8% do volume) é

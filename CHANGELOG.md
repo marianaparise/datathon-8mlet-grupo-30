@@ -10,9 +10,13 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: **Fase 5** — Golden Set com 5 clientes, `p̂` por braço e justificativa de negócio.
+Próxima: **Fase 6** — API FastAPI servindo o ranking por braço, mais Docker.
 
 ### Adicionado
+- `src/golden_set.py` e `tests/test_golden_set.py` (18 testes) — os cinco casos da Etapa 4,
+  escolhidos por critério e não sorteados, com `p̂` de todos os seis braços por cliente e
+  justificativa gerada a partir dos números.
+- Seção Golden Set no README e `models/golden_set.csv` gerado por `make train`.
 - `src/scenarios.py` e `tests/test_scenarios.py` (13 testes) — análise de sensibilidade temporal.
   `channel_confounding_report()` mede quanto do efeito de canal é, na verdade, calendário.
 - Seção dedicada no README quantificando a limitação principal do projeto.
@@ -23,6 +27,18 @@ Próxima: **Fase 5** — Golden Set com 5 clientes, `p̂` por braço e justifica
   parecer princípio. Num recorte com taxa-base de 14,5% a referência é 0,1240, e um Brier de 0,1061
   seria rejeitado apesar de bom. Trocado por **Brier Skill Score** (`1 - brier/p(1-p)`), que é
   relativo e transfere entre recortes. O ambiente principal tem skill de 0,141.
+
+### Notas — Golden Set
+- **Três dos cinco casos dão empate entre os braços do topo**, e isso é o teto contextual de +4,44%
+  visto cliente a cliente: na maioria dos perfis os líderes são indistinguíveis, numa minoria a
+  escolha vale muito. O caso do estudante de 18 anos tem 38 p.p. entre o melhor e o pior braço.
+- **Empate não é vendido como troca de braço.** `TIE_THRESHOLD` de 0,5 p.p. — menor que o desvio de
+  calibração do pior braço — separa preferência real de desempate numérico. Há teste para isso.
+- **A calibração isotônica é função em degraus**, então clientes de alta propensão caem no mesmo
+  patamar: um dos casos tem cinco braços empatados em 71,11%. Documentado como artefato de
+  modelagem em vez de apresentado como resultado.
+- Um caso rende recomendação **por exclusão**: os dois líderes empatam entre si mas superam o braço
+  médio em 1,07 p.p., então a decisão útil é sair do braço global, não escolher entre os líderes.
 
 ### Notas — a limitação principal, com número
 - **A vantagem do celular sobre o telefone fixo é inflada 9,4x pelo confounding temporal.** Medida

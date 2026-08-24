@@ -14,7 +14,7 @@ Decisões e restrições em `CLAUDE.md`.
 | 2 ✅ | Braços e ambiente calibrado | base da Etapa 3 |
 | 3 ✅ | Políticas e experimentos | Etapas 3 e 7 |
 | 4 ✅ | Replay sobre o log real | validação da Etapa 3 |
-| 5 | Métricas e Golden Set | Etapa 4 |
+| 5 ✅ | Métricas e Golden Set | Etapa 4 |
 | 6 | API e Docker | Etapa 5 |
 | 7 | README consolidado e arquitetura em nuvem | Etapas 0, 1, 6 |
 | 8 | Vídeo pitch | Etapa 8 |
@@ -177,13 +177,13 @@ o baseline principal é a **regra fixa**, com o melhor braço histórico como co
 
 **Cobre a Etapa 4.**
 
-- [ ] Consolidar a tabela comparativa: baseline vs cada política, nos dois tracks
-- [ ] `src/golden_set.py`: **5 clientes** escolhidos por critério, não por sorteio — perfis que
+- [x] Consolidar a tabela comparativa: baseline vs cada política, nos dois tracks
+- [x] `src/golden_set.py`: **5 clientes** escolhidos por critério, não por sorteio — perfis que
       exercitam decisões diferentes (ex.: sem histórico, `poutcome=success`, muitos contatos prévios,
       perfil médio, perfil de canal atípico)
-- [ ] Para cada caso: features de entrada, braço recomendado, `p̂` de todos os braços e a justificativa
+- [x] Para cada caso: features de entrada, braço recomendado, `p̂` de todos os braços e a justificativa
       em linguagem de negócio — "a decisão fez sentido?" é a pergunta literal do enunciado
-- [ ] Tabela replicada no README
+- [x] Tabela replicada no README
 
 ---
 

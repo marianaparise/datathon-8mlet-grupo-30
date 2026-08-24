@@ -37,6 +37,11 @@ from src.evaluation import (  # noqa: E402
     start_tracking,
     summarize,
 )
+from src.golden_set import (  # noqa: E402
+    explain,
+    golden_set_table,
+    select_golden_set,
+)
 from src.policies import (  # noqa: E402
     UCB1,
     EpsilonGreedy,
@@ -274,9 +279,18 @@ def main() -> None:
     print(comparison.round(4).to_string(index=False))
     print(f"\nSpearman entre os rankings: {agreement:.3f}")
 
+    cases = select_golden_set(test, env, space)
+    print("\n=== GOLDEN SET (Etapa 4) ===")
+    for case in cases:
+        print(f"\n{case.criterion} — cliente {case.row_label}")
+        print(f"  {explain(case, space)}")
+
     plot_curves(results, space)
 
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    golden_set_table(cases, space).to_csv(
+        config.MODELS_DIR / "golden_set.csv", index=False
+    )
     joblib.dump(env, config.ENVIRONMENT_ARTIFACT)
     table.to_csv(config.MODELS_DIR / "results.csv", index=False)
     replay_table.to_csv(config.MODELS_DIR / "results_replay.csv", index=False)

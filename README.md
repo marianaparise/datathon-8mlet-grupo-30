@@ -2,9 +2,9 @@
 
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
-> 🚧 **Em construção.** O projeto está na Fase 4 de 8 do plano de implementação.
-> Etapas 1, 2, 3 e 7 do enunciado entregues, com os dois tracks de avaliação fechados;
-> faltam o Golden Set, a API e o vídeo.
+> 🚧 **Em construção.** O projeto está na Fase 5 de 8 do plano de implementação.
+> Etapas 1, 2, 3, 4 e 7 do enunciado entregues; faltam a API (Etapa 5), a arquitetura em nuvem
+> (Etapa 6) e o vídeo (Etapa 8).
 >
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
 > decisões tomadas com o racional, decisões em aberto e referências de estudo.
@@ -395,8 +395,61 @@ Métricas: `cvr_final`, `cvr_ci_low/high`, `regret_final`, `regret_ci_low/high`,
 
 ## Golden Set
 
-<!-- Fase 5: 5 clientes, braço recomendado, p̂ por braço e justificativa de negócio -->
-_A preencher._
+Cinco clientes do conjunto de teste, **escolhidos por critério, não sorteados** — cinco clientes
+médios receberiam a mesma resposta e a tabela não provaria nada. Cada um exercita uma parte
+diferente da superfície de decisão.
+
+Reprodutível por [`src/golden_set.py`](src/golden_set.py); `make train` grava
+`models/golden_set.csv`.
+
+**Probabilidade estimada de conversão, por braço (%):**
+
+| Critério | Perfil | `cel\|early` | `cel\|late` | `cel\|mid` | `tel\|early` | `tel\|late` | `tel\|mid` | Recomendado |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| Sem histórico | 32a, empresário | 8,98 | 8,83 | **10,82** | 4,05 | 5,72 | 4,87 | `cellular\|mid` |
+| Converteu antes | 23a, admin., `poutcome=success` | 51,43 | **71,11** | **71,11** | **71,11** | **71,11** | **71,11** | *empate* |
+| Muitos contatos | 49a, técnico, `campaign=6` | **7,51** | 7,36 | 6,44 | **7,50** | 5,39 | 4,05 | *empate no topo* |
+| Perfil mediano | 31a, doméstica | 10,89 | 9,66 | **11,29** | 4,33 | 5,71 | 6,17 | `cellular\|mid` |
+| **Troca de braço** | 18a, estudante | 45,44 | **50,87** | 44,85 | 22,00 | 33,48 | 12,82 | `cellular\|late` |
+
+### A decisão fez sentido? Caso a caso
+
+**1. Sem histórico** — recomenda `cellular|mid`, o mesmo braço que vence na média, com 1,84 p.p.
+sobre o segundo. Nunca participou de campanha anterior, então não há histórico para elevar a
+estimativa e ela fica perto da taxa-base. Decisão correta e sem graça, que é o esperado.
+
+**2. Converteu antes** — cinco dos seis braços empatam em 71,11%. Não é coincidência: a calibração
+isotônica é uma **função em degraus**, e clientes de alta propensão caem todos no mesmo patamar.
+Chamar o argmax disso de preferência seria ler ruído. A resposta honesta é *"para este cliente
+tanto faz — escolha pelo custo do canal"*. É também um artefato de modelagem que vale conhecer.
+
+**3. Muitos contatos** — o caso mais interessante depois do quinto. Os dois primeiros braços estão
+empatados (0,01 p.p. entre eles), **mas os dois superam `cellular|mid` em 1,07 p.p.** A recomendação
+útil aqui é por exclusão: *sair* do braço que é melhor na média. Entre os líderes, decide o custo.
+Note que `telephone|early` aparece no topo — para um cliente já cansado de 6 ligações no celular, o
+canal alternativo deixa de ser inferior.
+
+**4. Perfil mediano** — `cellular|mid` com margem de 0,39 p.p., dentro do erro de calibração. Mais
+um empate na prática.
+
+**5. Troca de braço** — o caso que a personalização existe para capturar. Estudante de 18 anos:
+`cellular|late` a 50,87% contra 44,85% de `cellular|mid`. **A troca vale 6,01 p.p.**, e a diferença
+entre o melhor e o pior braço para este cliente é de **38 p.p.** Aqui a decisão importa muito.
+
+### O que o Golden Set demonstra
+
+**Três dos cinco casos são empates.** Isso não é falha da seleção — é exatamente como um teto
+contextual de +4,44% se manifesta cliente a cliente. Na maioria dos perfis os braços do topo são
+indistinguíveis; numa minoria, como o estudante, a escolha vale dezenas de pontos percentuais.
+
+O conjunto é consistente com o resto do projeto: **personalizar aqui rende pouco na média e muito em
+poucos casos** — e um bandit contextual não consegue identificar quais são esses casos rápido o
+bastante para pagar a exploração.
+
+> ⚠️ **De onde vem este ranking.** As probabilidades por braço vêm do **modelo de recompensa
+> calibrado** (o *Direct Method*), não de uma política de bandit. As políticas deste projeto são
+> não-contextuais: elas dariam a **mesma** resposta aos cinco clientes. A distinção importa e volta
+> na seção da API — o *scorer* ordena, o bandit decide quando explorar em vez de cravar no topo.
 
 ## Como executar
 
@@ -406,7 +459,7 @@ make data    # baixa a base do Kaggle para data/raw/
 make train   # roda o experimento ponta a ponta e serializa os artefatos
 make api     # sobe a API em http://localhost:8000/docs   (Fase 6)
 make mlflow  # abre a UI do MLflow em http://localhost:5000
-make test    # roda a suíte de testes — 144 no total
+make test    # roda a suíte de testes — 162 no total
 make lint    # checa estilo e erros estáticos com ruff
 ```
 
@@ -542,7 +595,8 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 │   ├── policies.py       # baseline, ε-greedy, UCB1, Thompson, LinTS
 │   ├── evaluation.py     # protocolo de ambiente, runner multi-seed, métricas, MLflow
 │   ├── replay.py         # rejection sampling, IPS e comparação entre os dois tracks
-│   └── scenarios.py      # análise de sensibilidade temporal e confounding de canal
+│   ├── scenarios.py      # análise de sensibilidade temporal e confounding de canal
+│   └── golden_set.py     # os cinco casos da Etapa 4
 ├── api/                  # serviço FastAPI                              (Fase 6)
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento

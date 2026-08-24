@@ -1,0 +1,36 @@
+# O contexto de build só precisa de src/, api/, models/ e requirements-api.txt.
+# Sem isto o Docker envia a base de 5,8 MB e o .venv inteiro para o daemon.
+
+.venv/
+venv/
+.git/
+.github/
+
+data/
+mlruns/
+mlartifacts/
+mlflow.db
+
+notebooks/
+reports/
+docs/
+tests/
+scripts/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.ruff_cache/
+
+*.pdf
+*.md
+!README.md
+
+Dockerfile
+docker-compose.yml
+Makefile
+conftest.py
+train.py
+.ruff.toml
+requirements.txt

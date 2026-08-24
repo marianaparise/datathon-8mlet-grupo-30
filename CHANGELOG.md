@@ -10,9 +10,37 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: **Fase 6** — API FastAPI servindo o ranking por braço, mais Docker.
+Próxima: **Fase 7** — README consolidado e arquitetura-alvo em nuvem (Etapa 6).
 
-### Adicionado
+### Adicionado — Fase 6, o serviço (Etapa 5)
+- `api/app.py` e `api/schemas.py` — `POST /recommend` devolvendo o ranking dos seis braços,
+  `GET /health` com a versão do artefato carregado, `GET /arms`, e `/docs` para a demo.
+- `Dockerfile` multi-stage (**508 MB**), usuário sem privilégios, `HEALTHCHECK`; `docker-compose.yml`
+  subindo API e UI do MLflow juntas; `.dockerignore`.
+- `requirements-api.txt` — **9 pacotes contra os 17 do desenvolvimento**.
+- `tests/test_api.py` — 27 testes. **189 no total.**
+
+### Alterado
+- **Import do MLflow virou preguiçoso em `src/evaluation.py`.** Esse módulo está no caminho de
+  import da API (`app` → `golden_set` → `environment` → `evaluation`), então um `import mlflow` de
+  topo arrastava a stack de tracking inteira para o container. Há teste que sobe um subprocesso e
+  falha se `mlflow`, `matplotlib` ou `seaborn` reaparecerem nesse caminho.
+- `make api` e `make docker-build` agora falham cedo, com mensagem, se `models/environment.joblib`
+  não existir — em vez de subir e quebrar na primeira requisição.
+
+### Notas — decisões de contrato
+- **A resposta traz o ranking completo, não só o vencedor**, mais o flag `is_tie`. Nesta base os
+  braços do topo empatam com frequência; devolver só o vencedor venderia precisão inexistente.
+- **Categóricas são `Literal`**, então nível desconhecido vira 422 nomeando os valores válidos. Sem
+  isso o encoder receberia o valor e devolveria um vetor de zeros, produzindo recomendação plausível
+  a partir de lixo.
+- **`duration` não tem campo no contrato**, e há teste conferindo que ela não aparece no OpenAPI.
+- `?explore=true` aplica ε-greedy sobre o ranking e marca `explored` na resposta. É **sem estado**:
+  aprendizado online de verdade exige endpoint de feedback e estatísticas por braço persistidas.
+  Declarado como roadmap no README em vez de insinuado como pronto.
+- Sem o artefato a API sobe e reporta `degraded` no `/health`, em vez de entrar em loop de reinício.
+
+### Adicionado — Fase 5
 - `src/golden_set.py` e `tests/test_golden_set.py` (18 testes) — os cinco casos da Etapa 4,
   escolhidos por critério e não sorteados, com `p̂` de todos os seis braços por cliente e
   justificativa gerada a partir dos números.

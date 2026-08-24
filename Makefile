@@ -9,7 +9,7 @@ help:
 	@echo "setup        cria o .venv e instala as dependências"
 	@echo "data         baixa a base do Kaggle para data/raw/"
 	@echo "train        roda o pipeline ponta a ponta e serializa os artefatos"
-	@echo "api          sobe a API local em http://localhost:8000/docs"
+	@echo "api          sobe a API local em http://localhost:8000/docs (exige make train)"
 	@echo "mlflow       abre a UI do MLflow em http://localhost:5000"
 	@echo "test         roda a suíte de testes"
 	@echo "lint         checa estilo e erros estáticos com ruff"
@@ -29,6 +29,7 @@ train:
 	$(PY) train.py
 
 api:
+	@test -f models/environment.joblib || (echo "models/environment.joblib ausente — rode 'make train' antes."; exit 1)
 	$(VENV)/bin/uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
 
 mlflow:
@@ -41,6 +42,7 @@ lint:
 	$(VENV)/bin/ruff check .
 
 docker-build:
+	@test -f models/environment.joblib || (echo "models/environment.joblib ausente — rode 'make train' antes."; exit 1)
 	docker compose build
 
 docker-up:

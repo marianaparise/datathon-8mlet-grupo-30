@@ -2,9 +2,9 @@
 
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
-> 🚧 **Em construção.** O projeto está na Fase 5 de 8 do plano de implementação.
-> Etapas 1, 2, 3, 4 e 7 do enunciado entregues; faltam a API (Etapa 5), a arquitetura em nuvem
-> (Etapa 6) e o vídeo (Etapa 8).
+> 🚧 **Em construção.** O projeto está na Fase 6 de 8 do plano de implementação.
+> Etapas 0 a 5 e 7 do enunciado entregues; faltam a arquitetura em nuvem (Etapa 6) e o vídeo
+> (Etapa 8).
 >
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
 > decisões tomadas com o racional, decisões em aberto e referências de estudo.
@@ -459,7 +459,7 @@ make data    # baixa a base do Kaggle para data/raw/
 make train   # roda o experimento ponta a ponta e serializa os artefatos
 make api     # sobe a API em http://localhost:8000/docs   (Fase 6)
 make mlflow  # abre a UI do MLflow em http://localhost:5000
-make test    # roda a suíte de testes — 162 no total
+make test    # roda a suíte de testes — 189 no total
 make lint    # checa estilo e erros estáticos com ruff
 ```
 
@@ -481,13 +481,97 @@ figuras de [`reports/figures/`](reports/figures).
 senão o download vem do UCI. Nos dois casos o arquivo é conferido por SHA-256, e o comando é
 idempotente — rodar de novo com o arquivo íntegro não baixa nada.
 
-Via Docker:
+## O serviço
+
+Etapa 5. A API carrega o ambiente serializado e pontua **os seis braços** para o cliente que chega
+na requisição.
 
 ```bash
-make docker-up
+make train    # gera models/environment.joblib — pré-requisito
+make api      # http://localhost:8000/docs
 ```
 
-<!-- Fase 6: confirmar que o docker compose sobe API + MLflow -->
+Ou em container:
+
+```bash
+make docker-build && make docker-up
+```
+
+Sobe a API em `:8000` e a UI do MLflow em `:5000` — as duas telas da demo.
+
+### Endpoints
+
+| | |
+|---|---|
+| `POST /recommend` | Recomendação + ranking completo dos 6 braços |
+| `GET /health` | Estado, nº de braços e versão do artefato carregado |
+| `GET /arms` | O espaço de ações |
+| `GET /docs` | Swagger interativo — é o que aparece no vídeo |
+
+```bash
+curl -X POST http://localhost:8000/recommend \
+  -H 'Content-Type: application/json' \
+  -d '{"age":18,"job":"student","marital":"single","education":"high.school",
+       "default":"no","housing":"no","loan":"no","campaign":1,"pdays":999,
+       "previous":0,"poutcome":"nonexistent"}'
+```
+
+```json
+{
+  "recommended_arm": "cellular|late",
+  "probability": 0.4485,
+  "is_tie": true,
+  "margin": 0.0000,
+  "explored": false,
+  "ranking": [
+    {"arm": "cellular|late",   "channel": "cellular",  "window": "late",  "probability": 0.4485},
+    {"arm": "cellular|early",  "channel": "cellular",  "window": "early", "probability": 0.4485},
+    {"arm": "cellular|mid",    "channel": "cellular",  "window": "mid",   "probability": 0.3992},
+    {"arm": "telephone|late",  "channel": "telephone", "window": "late",  "probability": 0.2596},
+    {"arm": "telephone|early", "channel": "telephone", "window": "early", "probability": 0.2319},
+    {"arm": "telephone|mid",   "channel": "telephone", "window": "mid",   "probability": 0.1014}
+  ]
+}
+```
+
+### Três decisões de contrato
+
+**Devolve o ranking inteiro, não só o vencedor.** Nesta base os braços do topo empatam com
+frequência, e `is_tie` diz isso na cara. Entregar só o vencedor seria vender uma precisão que o
+modelo não tem — com o ranking, quem chama pode desempatar pelo custo do canal.
+
+**O contrato espelha as colunas do log.** Quem tem o cadastro do cliente preenche sem saber nada do
+modelo. `first_contact` é derivado internamente de `pdays == 999`, porque é detalhe de modelagem, não
+algo que um CRM guarde. E **`duration` não tem campo** — há teste conferindo que ela não aparece nem
+no OpenAPI.
+
+**Categóricas são `Literal`, não string livre.** Um nível desconhecido é recusado com **422** na
+porta, nomeando os valores válidos, em vez de chegar ao encoder e virar silenciosamente um vetor de
+zeros — que produziria uma recomendação plausível a partir de lixo.
+
+### Explorar ou explotar?
+
+`POST /recommend?explore=true` aplica ε-greedy sobre o ranking: com probabilidade ε devolve um braço
+aleatório e marca `"explored": true`. É assim que um bandit continua aprendendo depois de entrar no
+ar — um endpoint que sempre devolve o topo nunca descobre nada novo.
+
+> **O que falta para ser aprendizado online de verdade.** Este `explore` é **sem estado**. Um
+> deployment real precisa de um endpoint de feedback e das estatísticas por braço persistidas, para
+> a posterior se atualizar a cada conversão observada. Está no roadmap, não implementado.
+
+### Imagem
+
+**508 MB**, multi-stage, usuário sem privilégios, com `HEALTHCHECK`. Instala
+[`requirements-api.txt`](requirements-api.txt) — **9 pacotes**, contra os 17 do desenvolvimento:
+MLflow, matplotlib, seaborn, jupyter e as ferramentas de teste não entram num container que só
+pontua clientes.
+
+Isso exigiu tornar o import do MLflow preguiçoso em `src/evaluation.py`, que está no caminho de
+import da API. Há teste que sobe um subprocesso e falha se `mlflow`, `matplotlib` ou `seaborn`
+reaparecerem nesse caminho.
+
+Se o artefato não existir, a API **sobe e reporta `degraded`** no `/health` em vez de entrar em
+loop de reinício — bem mais fácil de diagnosticar que um container reiniciando.
 
 ## Arquitetura-alvo em nuvem
 
@@ -597,7 +681,12 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 │   ├── replay.py         # rejection sampling, IPS e comparação entre os dois tracks
 │   ├── scenarios.py      # análise de sensibilidade temporal e confounding de canal
 │   └── golden_set.py     # os cinco casos da Etapa 4
-├── api/                  # serviço FastAPI                              (Fase 6)
+├── api/
+│   ├── app.py            # FastAPI: /recommend, /health, /arms
+│   └── schemas.py        # contratos pydantic com validação por Literal
+├── Dockerfile            # multi-stage, 508 MB, usuário sem privilégios
+├── docker-compose.yml    # API + UI do MLflow
+├── requirements-api.txt  # runtime do serviço — 9 pacotes, não 17
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento
 ├── scripts/download_data.sh

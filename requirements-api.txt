@@ -1,0 +1,18 @@
+# Subconjunto de runtime do serviço. Deliberadamente menor que o
+# requirements.txt: a imagem de serving não precisa de MLflow, matplotlib,
+# seaborn, jupyter nem das ferramentas de teste.
+#
+# O caminho de import de `api/app.py` é verificado por teste — nenhuma dessas
+# bibliotecas pode reaparecer nele sem quebrar a suíte.
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
+pydantic==2.13.4
+
+# O ambiente serializado é um pipeline scikit-learn; carregá-lo exige as
+# mesmas versões que o gravaram.
+numpy==2.5.1
+pandas==2.3.3
+scikit-learn==1.9.0
+scipy==1.18.0
+joblib==1.5.3

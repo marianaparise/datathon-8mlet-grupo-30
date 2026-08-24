@@ -15,7 +15,7 @@ Decisões e restrições em `CLAUDE.md`.
 | 3 ✅ | Políticas e experimentos | Etapas 3 e 7 |
 | 4 ✅ | Replay sobre o log real | validação da Etapa 3 |
 | 5 ✅ | Métricas e Golden Set | Etapa 4 |
-| 6 | API e Docker | Etapa 5 |
+| 6 ✅ | API e Docker | Etapa 5 |
 | 7 | README consolidado e arquitetura em nuvem | Etapas 0, 1, 6 |
 | 8 | Vídeo pitch | Etapa 8 |
 
@@ -191,15 +191,15 @@ o baseline principal é a **regra fixa**, com o melhor braço histórico como co
 
 **Cobre a Etapa 5.**
 
-- [ ] `api/schemas.py`: contrato de entrada com validação pydantic
-- [ ] `api/app.py`:
-  - [ ] `POST /recommend` → braço recomendado, `p̂` estimada, ranking completo e versão da política
-  - [ ] `GET /health`
-  - [ ] `/docs` Swagger — é o que aparece no vídeo
-- [ ] Carga dos artefatos de `models/` no startup, sem retreinar
-- [ ] `Dockerfile` multi-stage
-- [ ] `docker-compose.yml` subindo API + MLflow UI juntos
-- [ ] `tests/test_api.py` com `TestClient`, incluindo payload inválido
+- [x] `api/schemas.py`: contrato de entrada com validação pydantic
+- [x] `api/app.py`:
+  - [x] `POST /recommend` → braço recomendado, `p̂` estimada, ranking completo e versão da política
+  - [x] `GET /health`
+  - [x] `/docs` Swagger — é o que aparece no vídeo
+- [x] Carga dos artefatos de `models/` no startup, sem retreinar
+- [x] `Dockerfile` multi-stage
+- [x] `docker-compose.yml` subindo API + MLflow UI juntos
+- [x] `tests/test_api.py` com `TestClient`, incluindo payload inválido
 
 ---
 

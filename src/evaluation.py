@@ -12,7 +12,6 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
-import mlflow
 import numpy as np
 import pandas as pd
 from scipy.stats import t as student_t
@@ -304,7 +303,17 @@ def start_tracking(
     tracking_uri: str = config.MLFLOW_TRACKING_URI,
     experiment: str = config.MLFLOW_EXPERIMENT,
 ) -> None:
-    """Point MLflow at the local store. Called by entrypoints, never on import."""
+    """Point MLflow at the local store. Called by entrypoints, never on import.
+
+    MLflow is imported here, not at module level, and that is deliberate. This
+    module sits on the import path of the serving API — ``app`` imports
+    ``golden_set``, which imports ``environment``, which imports the
+    :class:`Observation` defined here. A top-level ``import mlflow`` would drag
+    the whole tracking stack into the container for code that only ever runs
+    during an experiment.
+    """
+    import mlflow
+
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(experiment)
 
@@ -322,6 +331,8 @@ def log_experiment(
     can actually be quoted. The children keep every seed auditable, so nobody
     has to take the average on faith.
     """
+    import mlflow  # ver a nota em `start_tracking`
+
     cvr_low, cvr_high = confidence_interval(result.cvrs)
     regret_low, regret_high = confidence_interval(result.regrets)
     mean_cvr = float(result.cvrs.mean())

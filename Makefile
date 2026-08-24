@@ -32,7 +32,7 @@ api:
 	$(VENV)/bin/uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
 
 mlflow:
-	$(VENV)/bin/mlflow ui --port 5000
+	$(VENV)/bin/mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5000
 
 test:
 	$(VENV)/bin/pytest tests/ -v

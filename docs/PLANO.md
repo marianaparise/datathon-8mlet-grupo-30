@@ -9,10 +9,10 @@ Decisões e restrições em `CLAUDE.md`.
 
 | Fase | Entrega | Etapas cobertas |
 |---|---|---|
-| 0 | Fundação do repositório | Etapa 0 |
-| 1 | Dados e EDA | Etapas 1 e 2 |
-| 2 | Braços e ambiente calibrado | base da Etapa 3 |
-| 3 | Políticas e experimentos | Etapas 3 e 7 |
+| 0 ✅ | Fundação do repositório | Etapa 0 |
+| 1 ✅ | Dados e EDA | Etapas 1 e 2 |
+| 2 ✅ | Braços e ambiente calibrado | base da Etapa 3 |
+| 3 ✅ | Políticas e experimentos | Etapas 3 e 7 |
 | 4 | Replay sobre o log real | validação da Etapa 3 |
 | 5 | Métricas e Golden Set | Etapa 4 |
 | 6 | API e Docker | Etapa 5 |
@@ -110,14 +110,14 @@ da API da Fase 6 e não pode arrastar matplotlib para o container.
 
 **Base da Etapa 3. É o track A.**
 
-- [ ] `src/arms.py`: espaço de braços, encoding, mapeamento log → braço
-- [ ] `src/environment.py`: estimar `P(y | contexto, braço)`
-  - [ ] `HistGradientBoostingClassifier` com `CalibratedClassifierCV`
-  - [ ] **validar a calibração**: Brier score e curva de confiabilidade no conjunto de teste.
+- [x] `src/arms.py`: espaço de braços, encoding, mapeamento log → braço
+- [x] `src/environment.py`: estimar `P(y | contexto, braço)`
+  - [x] `HistGradientBoostingClassifier` com `CalibratedClassifierCV`
+  - [x] **validar a calibração**: Brier score e curva de confiabilidade no conjunto de teste.
         Ambiente mal calibrado invalida todo o resto
-  - [ ] comparar com um baseline de propensão (regressão logística) para sanidade
-- [ ] Testar **heterogeneidade braço × contexto**: o melhor braço muda conforme o perfil?
-  - [ ] se não muda, o bandit contextual não tem o que ganhar → revisar o espaço de braços
+  - [x] comparar com um baseline de propensão (regressão logística) para sanidade
+- [x] Testar **heterogeneidade braço × contexto**: o melhor braço muda conforme o perfil?
+  - [x] se não muda, o bandit contextual não tem o que ganhar → revisar o espaço de braços
 
 **Saída:** ambiente que, dado um cliente e um braço, devolve recompensa Bernoulli calibrada,
 mais o oráculo `argmax_a p̂(y|x,a)` que permite calcular regret verdadeiro.
@@ -131,21 +131,21 @@ README, e é justamente o que a Fase 4 existe para contrabalançar.
 
 **Cobre as Etapas 3 e 7.**
 
-- [ ] `src/policies.py`, todas com a mesma interface `select` / `update`:
-  - [ ] `FixedPolicy` — **baseline determinístico**: a regra que a operação de fato seguia
-  - [ ] `BestHistoricalArm` — segundo comparador, mais difícil de bater
-  - [ ] `EpsilonGreedy`
-  - [ ] `UCB1`
-  - [ ] `ThompsonSampling` — Beta-Bernoulli, **priors documentados** (exigência explícita do PDF)
-  - [ ] `LinTS` (ou `LinUCB`) — a política contextual, onde mora o diferencial
-- [ ] `src/evaluation.py`:
-  - [ ] runner de N rodadas × M seeds
-  - [ ] métricas: CVR acumulada, regret acumulado vs oráculo, uplift % vs baseline, IC entre seeds
-  - [ ] curvas exportadas para `reports/figures/`
-- [ ] MLflow: um run por (política, seed)
-  - [ ] params: `policy`, `epsilon`, `alpha`, priors Beta, `n_rounds`, `seed`, `n_arms`
-  - [ ] métricas: `cvr_final`, `regret_final`, `uplift_vs_baseline`, `exploration_rate`
-- [ ] `train.py` amarra o pipeline ponta a ponta e serializa os artefatos
+- [x] `src/policies.py`, todas com a mesma interface `select` / `update`:
+  - [x] `FixedPolicy` — **baseline determinístico**: a regra que a operação de fato seguia
+  - [x] `BestHistoricalArm` — segundo comparador, mais difícil de bater
+  - [x] `EpsilonGreedy`
+  - [x] `UCB1`
+  - [x] `ThompsonSampling` — Beta-Bernoulli, **priors documentados** (exigência explícita do PDF)
+  - [x] `LinTS` (ou `LinUCB`) — a política contextual, onde mora o diferencial
+- [x] `src/evaluation.py`:
+  - [x] runner de N rodadas × M seeds
+  - [x] métricas: CVR acumulada, regret acumulado vs oráculo, uplift % vs baseline, IC entre seeds
+  - [x] curvas exportadas para `reports/figures/`
+- [x] MLflow: um run por (política, seed)
+  - [x] params: `policy`, `epsilon`, `alpha`, priors Beta, `n_rounds`, `seed`, `n_arms`
+  - [x] métricas: `cvr_final`, `regret_final`, `uplift_vs_baseline`, `exploration_rate`
+- [x] `train.py` amarra o pipeline ponta a ponta e serializa os artefatos
 
 **Ponto de atenção de design:** o enunciado permite escolher o baseline entre regra fixa, melhor braço
 histórico ou segmentação inicial. Se o baseline for "melhor braço histórico" e existir um braço

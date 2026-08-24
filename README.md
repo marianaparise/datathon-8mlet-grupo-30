@@ -2,7 +2,8 @@
 
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
-> 🚧 **Em construção.** O projeto está na Fase 1 de 8 do plano de implementação.
+> 🚧 **Em construção.** O projeto está na Fase 3 de 8 do plano de implementação.
+> Etapas 1, 2, 3 e 7 do enunciado entregues; faltam o replay, o Golden Set, a API e o vídeo.
 > As seções de resultados, Golden Set e arquitetura em nuvem serão preenchidas conforme as fases avançam.
 >
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
@@ -144,14 +145,18 @@ recompensa é o `y` observado, nunca estimado. Serve de contraprova para o track
 
 ## Políticas comparadas
 
+Todas implementam a mesma interface — `select(contexto) → braço` e `update(contexto, braço,
+recompensa)` — para que trocar uma pela outra no experimento seja trocar uma linha, e a comparação
+seja justa.
+
 | Política | Papel |
 |---|---|
-| Regra fixa | **Baseline principal** — a política de log, conversão realizada de 11,27% |
-| Melhor braço histórico | Comparador secundário: `cellular \| mid`, 15,47% |
-| ε-Greedy | Exploração aleatória com taxa fixa |
-| UCB1 | Exploração guiada por incerteza |
-| Thompson Sampling | Exploração bayesiana, Beta-Bernoulli com priors documentados |
-| LinTS | **Contextual** — é onde a personalização aparece |
+| `LoggingPolicy` | **Baseline principal** — reamostra a mistura histórica de braços |
+| `FixedArm` | Comparador duro — sempre `cellular \| mid`, o melhor braço do log |
+| `EpsilonGreedy` | Exploração aleatória a taxa fixa |
+| `UCB1` | Exploração guiada por incerteza |
+| `ThompsonSampling` | Exploração bayesiana, Beta-Bernoulli com **priors documentados** |
+| `LinTS` | **Contextual** — a única que lê o cliente |
 
 A escolha do baseline não é detalhe. O braço mais usado do log (`cellular | mid`, 38,8% do volume)
 é **também** o de maior conversão — modal e melhor histórico são o mesmo braço. Se o baseline fosse
@@ -159,14 +164,154 @@ A escolha do baseline não é detalhe. O braço mais usado do log (`cellular | m
 seria zero, falhando o requisito da Etapa 3.
 
 Por isso o baseline principal é a **política de log**: a operação não jogava o melhor braço, jogava
-uma mistura, e a conversão que ela realizou foi 11,27%. Concentrar em `cellular | mid` rende 15,47%
-— uplift de **+37%**, e legítimo. O melhor braço histórico fica como comparador duro, e é contra
-ele que a política contextual precisa provar valor.
+uma mistura, e a conversão que ela realizou foi 11,27%. O melhor braço histórico fica como
+comparador duro, e é contra ele que a política contextual precisa provar valor.
+
+> **Duas fontes de número, não confundir.** As taxas desta seção (11,27% global, 15,47% em
+> `cellular | mid`) são **observadas no log inteiro**. As da seção de resultados vêm do **ambiente
+> calibrado sobre o conjunto de teste**, onde a política de log rende 11,01%. A diferença é de
+> amostra e de método, não de contradição — cada tabela diz qual das duas está usando.
+
+## O ambiente calibrado
+
+O track A estima `P(y | contexto, braço)` com `HistGradientBoostingClassifier` calibrado por
+isotônica. Um modelo único com o braço como feature, não um por braço: o menor braço tem ~111
+conversões no treino, pouco para calibrar isoladamente.
+
+O contexto são **12 colunas de cliente** — sem `duration`, sem as colunas de ação e sem os
+indicadores macro, que a Fase 1 mostrou serem carimbo de calendário.
+
+Nada disso vale sem prova, então o ambiente passa por **três portões antes de ser usado**. Se
+qualquer um falhar, `build_environment` levanta exceção em vez de seguir.
+
+**1. Calibração — global e por braço.** Calibração boa no total pode esconder um braço de baixo
+volume completamente errado, e o experimento herdaria esse erro como se fosse verdade.
+
+| Braço | n | Brier | Previsto | Observado | Desvio |
+|---|---:|---:|---:|---:|---:|
+| **TOTAL** | 8.238 | **0,0860** | 11,30% | 11,28% | **0,02 p.p.** |
+| `cellular\|early` | 1.107 | 0,0986 | 12,44% | 12,83% | 0,39 p.p. |
+| `cellular\|late` | 929 | 0,1071 | 14,89% | 14,53% | 0,36 p.p. |
+| `cellular\|mid` | 3.193 | 0,1126 | 15,19% | 15,47% | 0,29 p.p. |
+| `telephone\|early` | 596 | 0,0464 | 5,53% | 4,70% | 0,83 p.p. |
+| `telephone\|late` | 636 | 0,0456 | 6,31% | 5,35% | **0,96 p.p.** |
+| `telephone\|mid` | 1.777 | 0,0472 | 5,44% | 5,40% | 0,04 p.p. |
+
+**2. Sanity check.** AUC **0,7413** contra **0,7274** de uma regressão logística. O ganho do
+boosting é pequeno mas real; se fosse negativo, a complexidade extra seria ruído.
+
+**3. Sobreposição (positividade).** Um modelo `P(braço | contexto)` mede se todo braço tem suporte
+em toda a região do contexto. Onde não tem, prever é **extrapolar**:
+
+| Braço | Propensão mín. | p01 | Mediana | Clientes abaixo de 1% |
+|---|---:|---:|---:|---:|
+| `cellular\|mid` | 0,1075 | 0,2064 | 0,3806 | 0,00% |
+| `cellular\|early` | 0,0572 | 0,0739 | 0,1299 | 0,00% |
+| `cellular\|late` | 0,0109 | 0,0331 | 0,1050 | 0,00% |
+| `telephone\|mid` | 0,0056 | 0,0175 | 0,2278 | 0,11% |
+| `telephone\|early` | 0,0012 | 0,0066 | 0,0729 | **3,76%** |
+| `telephone\|late` | 0,0000 | 0,0048 | 0,0755 | **4,37%** |
+
+Para ~96% dos clientes o ambiente interpola entre linhas que existem. Para os ~4% restantes, os
+braços de telefone fixo são extrapolação — consequência direta do confounding temporal, já que o
+fixo praticamente sumiu da campanha depois de agosto de 2008.
+
+### O teto do ganho contextual
+
+Com o ambiente calibrado dá para responder, **antes de escrever qualquer política**, se
+personalizar tem como valer a pena. Basta comparar o melhor braço fixo com um oráculo que escolhe
+o braço ideal cliente a cliente:
+
+| | CVR |
+|---|---:|
+| Melhor braço fixo (`cellular\|mid`) | 13,37% |
+| Oráculo contextual | 13,97% |
+| **Ganho máximo teórico** | **+0,59 p.p. (+4,44%)** |
+| Clientes cujo braço ótimo difere do global | 47,43% |
+
+Quase metade dos clientes tem outro braço ótimo, mas o ganho total é de meio ponto percentual — as
+trocas são quase todas entre braços de probabilidade praticamente igual. **Esse número define o
+que a política contextual pode disputar**, e volta na leitura dos resultados.
 
 ## Resultados
 
-<!-- Fase 3/4/5: tabela comparativa, curvas de regret, resultado do replay -->
-_A preencher._
+**20.000 rodadas × 10 seeds**, média com intervalo de confiança de 95% (t de Student entre seeds).
+Baseline = política de log.
+
+| Política | CVR | IC 95% | Uplift vs baseline | Exploração |
+|---|---:|---|---:|---:|
+| `FixedArm[cellular\|mid]` | **13,31%** | [13,14%; 13,47%] | **+20,85%** | 0,0% |
+| `ThompsonSampling[1.13, 8.87]` | **13,01%** | [12,84%; 13,18%] | **+18,16%** | 23,0% |
+| `EpsilonGreedy[ε=0.05]` | 12,88% | [12,55%; 13,20%] | +16,95% | 16,1% |
+| `ThompsonSampling[1, 1]` | 12,81% | [12,56%; 13,06%] | +16,36% | 38,0% |
+| `UCB1[c=0.25]` | 12,70% | [12,50%; 12,91%] | +15,38% | 41,7% |
+| `LinTS[v=0.05]` | 12,41% | [12,24%; 12,58%] | +12,69% | 59,5% |
+| `LoggingPolicy` (baseline) | 11,01% | [10,83%; 11,19%] | — | 61,3% |
+
+![Conversão acumulada](reports/figures/cvr_acumulada.png)
+![Regret acumulado](reports/figures/regret_acumulado.png)
+
+**Todas as políticas adaptativas superam o baseline**, com folga e sem sobreposição de intervalos.
+A melhor delas entrega **+18,2%** de conversão sobre a política que a operação de fato executava.
+
+Três leituras que os números impõem:
+
+**O prior informado vence o uniforme.** `Beta(1.13, 8.87)` codifica a taxa-base de 11,27% com a
+força de 10 observações, e rende 13,01% contra 12,81% do `Beta(1, 1)`. O motivo aparece na coluna
+de exploração: 23,0% contra 38,0%. Partir de uma crença calibrada poupa exatamente as rodadas que
+o prior uniforme gasta descobrindo que nenhum braço converte a 50%.
+
+**O braço fixo ganha de todas as adaptativas — e isso era esperado.** O ambiente é estacionário e
+tem um braço dominante, então a melhor jogada possível é justamente cravar nele. As adaptativas
+pagam exploração para **descobrir** esse braço; a `FixedArm` já começa sabendo. Mas ela só sabe
+porque a Fase 1 analisou o log inteiro antes. Numa campanha nova, com braço novo ou com
+comportamento mudando no tempo, essa informação não existe — e é aí que o bandit paga a si mesmo.
+A `FixedArm` é o **limite superior de um oráculo estacionário**, não uma alternativa disponível
+no dia zero.
+
+**A política contextual não se paga.** A `LinTS` fica em 12,41%, abaixo da Thompson não-contextual,
+com 59,5% de exploração ainda no fim do horizonte. A explicação está no teto medido acima: há
+apenas **+4,44%** de ganho contextual disponível, e capturá-lo exige estimar 41 features × 6 braços
+= **246 parâmetros** a partir de recompensa binária que sai 1 em cada 9 vezes. O custo de
+exploração é maior que o prêmio.
+
+Isso não é bug de implementação: o teste
+[`test_lints_beats_context_free_thompson_when_context_matters`](tests/test_policies.py) roda a
+mesma `LinTS` num ambiente onde o braço ótimo depende do cliente, e lá ela **supera** a Thompson
+comum. A máquina detecta heterogeneidade quando ela existe. **Nestes dados, o efeito do braço é
+quase todo não-contextual** — canal importa muito, perfil quase nada.
+
+### Análise de exploração × conversão
+
+Cada política foi calibrada por sweep sobre o ambiente (5 seeds, 20.000 rodadas):
+
+| `UCB1` `c` | CVR | Exploração | | `ε-Greedy` `ε` | CVR | | `LinTS` `v` | CVR |
+|---:|---:|---:|---|---:|---:|---|---:|---:|
+| 0,05 | 11,00% | 18,4% | | 0,02 | 12,85% | | 0,02 | 12,38% |
+| 0,10 | 12,42% | 10,8% | | **0,05** | **12,89%** | | **0,05** | **12,44%** |
+| **0,25** | **12,74%** | 43,0% | | 0,10 | 12,58% | | 0,10 | 12,22% |
+| 0,50 | 12,18% | 51,6% | | 0,20 | 12,41% | | 0,25 | 12,03% |
+| 1,00 | 11,58% | 68,2% | | | | | 0,50 | 11,62% |
+
+O `UCB1` mostra a curva em U mais nítida: **o `c = 1.0` do livro-texto é o pior valor**, com 68%
+de exploração. O bônus `√(2·ln t / n)` foi desenhado para recompensa em toda a faixa [0, 1], mas
+aqui as médias vivem entre 5% e 15% — o bônus domina o sinal e a política nunca se decide. Com
+`c = 0.05` acontece o oposto: explora de menos, trava cedo e fica em 11,00%.
+
+![Onde cada política gastou o tráfego](reports/figures/puxadas_por_braco.png)
+
+### Rastreio no MLflow
+
+Cada política vira um **run pai** com média e intervalo entre seeds, e um **run filho por seed** —
+77 runs no total. A média fica citável e cada seed permanece auditável.
+
+```bash
+make mlflow   # http://localhost:5000
+```
+
+Params registrados: política, hiperparâmetros, `n_rounds`, `n_seeds`, `n_arms`, `seed`.
+Métricas: `cvr_final`, `cvr_ci_low/high`, `regret_final`, `regret_ci_low/high`,
+`uplift_vs_baseline`, `exploration_rate`.
 
 ## Golden Set
 
@@ -178,12 +323,22 @@ _A preencher._
 ```bash
 make setup   # cria o .venv e instala as dependências
 make data    # baixa a base do Kaggle para data/raw/
-make train   # roda o pipeline e serializa os artefatos
-make api     # sobe a API em http://localhost:8000/docs
+make train   # roda o experimento ponta a ponta e serializa os artefatos
+make api     # sobe a API em http://localhost:8000/docs   (Fase 6)
 make mlflow  # abre a UI do MLflow em http://localhost:5000
-make test    # roda a suíte de testes
+make test    # roda a suíte de testes — 113 no total
 make lint    # checa estilo e erros estáticos com ruff
 ```
+
+`make train` leva ~3 minutos: prepara a base, calibra o ambiente e roda as 7 políticas em 20.000
+rodadas × 10 seeds. Aceita `--rounds`, `--seeds` e `--no-mlflow` para execuções rápidas:
+
+```bash
+.venv/bin/python train.py --rounds 2000 --seeds 3 --no-mlflow
+```
+
+Ele grava `models/environment.joblib` (ambiente serializado, com encoder e modelo),
+`models/results.csv`, `models/metadata.json` e as figuras desta página.
 
 A análise exploratória está em [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb) e é versionada
 sem saídas. Para executá-la, `.venv/bin/jupyter lab notebooks/01_eda.ipynb` — ela regenera as
@@ -225,8 +380,15 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
   período. Ficam fora do contexto padrão do ambiente justamente por isso; mantidos como ablação.
 - **A heterogeneidade braço × contexto é fraca.** Nas estratificações testadas (`job`,
   `education`, `marital`, `poutcome`), quando o melhor braço muda de identidade os intervalos de
-  Wilson dos concorrentes se sobrepõem — nenhuma troca é estatisticamente distinguível. É o
-  principal risco aberto para a política contextual.
+  Wilson dos concorrentes se sobrepõem. O ambiente calibrado quantificou o efeito: teto de apenas
+  **+4,44%** para qualquer política contextual, e a `LinTS` não o captura.
+- **Extrapolação nos braços de telefone fixo.** Para 3,76% e 4,37% dos clientes, `telephone|early` e
+  `telephone|late` têm propensão abaixo de 1% — nessas regiões o ambiente prediz onde o log
+  praticamente não observou.
+- **Hiperparâmetros calibrados no mesmo ambiente em que são reportados.** O sweep de `ε`, `c` e `v`
+  usou o ambiente de teste, o que favorece as políticas adaptativas frente ao baseline e à
+  `FixedArm`, que não têm o que calibrar. A tabela completa do sweep está publicada acima
+  justamente para que o efeito seja visível em vez de embutido.
 - **A garantia de não-viés do replay não se aplica integralmente**, porque a política que gerou o log
   não era aleatória uniforme entre os braços.
 - **Ambiente calibrado não é tráfego real.** Nenhum resultado offline substitui um teste em produção.
@@ -234,14 +396,18 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 ## Estrutura do repositório
 
 ```
-├── train.py              # pipeline ponta a ponta
-├── src/                  # biblioteca: dados, braços, ambiente, políticas, replay, avaliação
-│   ├── config.py         # paths, schema, espaço de braços, pisos de suporte, seed
+├── train.py              # experimento ponta a ponta
+├── src/
+│   ├── config.py         # paths, schema, espaço de braços, hiperparâmetros, seed
 │   ├── data.py           # carga e pipeline de preparação determinístico
-│   └── eda.py            # agregações, intervalos de Wilson e figuras da análise
-├── api/                  # serviço FastAPI
+│   ├── eda.py            # agregações, intervalos de Wilson e figuras da análise
+│   ├── arms.py           # espaço de braços, mistura histórica, melhor braço
+│   ├── environment.py    # P(y | contexto, braço) calibrado + portões de qualidade
+│   ├── policies.py       # baseline, ε-greedy, UCB1, Thompson, LinTS
+│   └── evaluation.py     # protocolo de ambiente, runner multi-seed, métricas, MLflow
+├── api/                  # serviço FastAPI                              (Fase 6)
 ├── notebooks/01_eda.ipynb
-├── reports/figures/      # figuras geradas pelo notebook
+├── reports/figures/      # figuras do notebook e do experimento
 ├── scripts/download_data.sh
 ├── tests/
 ├── docs/PLANO.md         # plano de implementação em 8 fases

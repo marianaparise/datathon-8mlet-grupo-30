@@ -54,24 +54,44 @@ modelo superando baseline, MLflow, demo funcionando).
 
 ## 2. Onde estamos
 
-**Fases 0 e 1 de 8 concluídas.** Plano completo em [`PLANO.md`](PLANO.md).
+**Fases 0 a 3 de 8 concluídas.** Plano completo em [`PLANO.md`](PLANO.md).
+Etapas 0, 1, 2, 3 e 7 do enunciado entregues.
 
-✅ Estrutura de repositório, `requirements.txt` validado com instalação real, `Makefile`,
-`.gitignore`, README inicial, regras do projeto em [`CLAUDE.md`](../CLAUDE.md).
+✅ **Fase 0** — estrutura, `requirements.txt` validado com instalação real, `Makefile`, `.gitignore`,
+regras em [`CLAUDE.md`](../CLAUDE.md). `make data` roda sem credencial, com checksum.
 
-✅ Download da base automatizado e verificado por checksum — `make data` roda sem credencial.
+✅ **Fase 1** — `src/data.py`, `src/eda.py`, `notebooks/01_eda.ipynb`. Espaço de braços fixado em
+`contact × week_window` (6 braços).
 
-✅ **Fase 1** — `src/config.py`, `src/data.py`, `src/eda.py`, `conftest.py`,
-`notebooks/01_eda.ipynb` e 41 testes. Espaço de braços fixado em `contact × week_window`
-(6 braços); decisões em aberto #4, #5 e #6 fechadas.
+✅ **Fase 2** — `src/arms.py` e `src/environment.py`. Ambiente calibrado com três portões:
+Brier **0,0860**, desvio máximo por braço de **0,96 p.p.**, AUC 0,7413 contra 0,7274 da logística,
+e diagnóstico de sobreposição.
 
-❌ `api/` continua vazio. `src/arms.py`, `src/environment.py`, `src/policies.py`,
-`src/evaluation.py` e `train.py` nascem nas Fases 2 e 3.
+✅ **Fase 3** — `src/policies.py`, `src/evaluation.py`, `train.py`. Seis políticas, 20.000 rodadas
+× 10 seeds, 77 runs no MLflow. **113 testes no total.**
 
-**O achado que mais importa daqui para frente:** o braço modal do log é também o de maior
-conversão, e a heterogeneidade braço × contexto é fraca — nenhuma troca de melhor braço entre
-estratos é estatisticamente distinguível. O risco de o bandit empatar com o baseline é real e
-precisa ser atacado no teste de heterogeneidade da Fase 2, não na Fase 3.
+❌ `api/` continua vazio. `src/replay.py` (Fase 4) e o Golden Set (Fase 5) ainda não existem.
+
+### O requisito da Etapa 3 está cumprido
+
+Todas as políticas adaptativas superam o baseline, sem sobreposição de intervalos. A melhor
+(`ThompsonSampling` com prior informado) entrega **+18,2%** sobre a política de log.
+
+### Dois achados que mudam a conversa
+
+**A heterogeneidade fraca virou número.** O ambiente calibrado mede o teto do ganho contextual em
+**+4,44%** sobre o melhor braço fixo, com 47% dos clientes tendo outro braço ótimo — as trocas são
+quase todas entre braços de probabilidade praticamente igual. A `LinTS` não captura esse teto: fica
+em 12,41% contra 13,01% da Thompson comum, ainda com 59,5% de exploração no fim do horizonte.
+Estimar 246 parâmetros sobre recompensa binária de 11% custa mais do que rende.
+
+Isso **não é bug**: existe um teste que roda a mesma `LinTS` num ambiente onde o braço ótimo depende
+do cliente, e lá ela vence a Thompson. A máquina funciona; **estes dados é que são quase todos
+não-contextuais**.
+
+**O `c=1.0` de livro-texto do UCB1 é o pior valor possível aqui.** O bônus `√(2·ln t / n)` pressupõe
+recompensa em toda a faixa [0,1]; com médias entre 5% e 15% ele domina o sinal e a política nunca
+se decide. Com `c=0.25` a conversão sobe de 11,58% para 12,74%.
 
 ---
 
@@ -212,10 +232,13 @@ exatamente zero.
 o melhor braço. `BestHistoricalArm` fica como comparador secundário, e é contra ele que só a
 política **contextual** pode ganhar.
 
-⚠️ **Ressalva séria:** a heterogeneidade braço × contexto é fraca. Nas estratificações testadas
-(`job`, `education`, `marital`, `poutcome`), onde o melhor braço muda de identidade os intervalos de
-Wilson dos concorrentes se sobrepõem — nenhuma troca é estatisticamente distinguível. Se a Fase 2
-confirmar isso, o contextual não terá o que ganhar neste espaço de braços e será preciso revisá-lo.
+✅ **A Fase 3 confirmou a decisão com número.** No ambiente calibrado, a política de log rende
+11,01% e a melhor adaptativa 13,01% — **+18,2%**, sem sobreposição de intervalos. A `FixedArm` em
+`cellular|mid` chega a 13,31%, acima de todas as adaptativas, o que era esperado num ambiente
+estacionário com braço dominante: ela já começa sabendo o que as outras gastam exploração para
+descobrir. Ela é o teto de um oráculo estacionário, não uma alternativa disponível no dia zero.
+
+⚠️ **A ressalva sobre heterogeneidade se confirmou.** Ver decisão #8.
 
 ### ~~5. O que fazer com `euribor3m` e `nr.employed`~~ — ✅ **RESOLVIDA**
 Pior do que se supunha: **todos os cinco indicadores macro são constantes dentro do período**. O R²
@@ -242,7 +265,29 @@ povoados nos dois folds — o mais magro fica com 596 eventos e 28 conversões n
 vira análise de sensibilidade na Fase 3.
 
 ### 7. Divisão de trabalho e vídeo
-Quem toca o quê nas Fases 1–7, quem grava o vídeo da Etapa 8, e qual a data-limite interna.
+Quem toca o quê nas Fases 4–7, quem grava o vídeo da Etapa 8, e qual a data-limite interna.
+
+Até aqui: Doglas fez a Fase 1, Mariana as Fases 2 e 3. **A Fase 2 estava declarada como próximo
+passo do Doglas no CHANGELOG e acabou sendo feita pela Mariana** — vale alinhar para não repetir.
+
+### 8. O que fazer com a política contextual — **NOVA, precisa de decisão**
+
+A `LinTS` ficou em 12,41%, **abaixo** da Thompson não-contextual (13,01%), com 59,5% de exploração
+ainda no fim das 20.000 rodadas. A causa está medida: o teto do ganho contextual é de apenas
+**+4,44%** sobre o melhor braço fixo, e capturá-lo exige estimar 41 features × 6 braços = 246
+parâmetros a partir de recompensa binária que sai 1 em cada 9 vezes.
+
+A implementação está validada — há teste que a coloca contra a Thompson num ambiente onde o braço
+ótimo depende do cliente, e lá ela vence. O problema é o dado, não o código.
+
+**Opções:**
+1. **Reportar como está** (recomendado). "Testamos, medimos o teto, a contextual não se paga nestes
+   dados" é resultado maduro, e a evidência está toda no README. O enunciado não exige que o
+   contextual vença — exige que o adaptativo supere o baseline, o que já acontece.
+2. **Reduzir a dimensão do contexto.** Menos features = menos parâmetros = convergência mais rápida.
+   Custa tempo e pode não mudar nada, já que o teto continua sendo 4,44%.
+3. **Revisar o espaço de braços** para um em que a heterogeneidade seja maior. Reabre a Fase 1
+   inteira; não recomendo a esta altura.
 
 ---
 

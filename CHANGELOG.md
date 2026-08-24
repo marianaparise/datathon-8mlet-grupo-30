@@ -10,9 +10,83 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: **Fase 2** — `src/arms.py` e `src/environment.py`, com `P(y | contexto, braço)` calibrado
-e validado por Brier score e curva de confiabilidade. O teste de heterogeneidade braço × contexto
-sobe de prioridade: a Fase 1 mostrou que ela é fraca no espaço de braços escolhido.
+Próxima: **Fase 4** — `src/replay.py`, rejection sampling sobre o log real como contraprova do
+ambiente calibrado, com ponderação IPS e comparação do ranking de políticas entre os dois tracks.
+
+---
+
+## [0.5.0] — 2026-08-24 — Fases 2 e 3: ambiente calibrado, políticas e o experimento
+
+Cobre as **Etapas 3 e 7** do enunciado. O requisito central — algoritmo adaptativo superando o
+baseline — está cumprido e medido: **+18,2%** da melhor política sobre a política de log.
+
+### Adicionado
+- `src/arms.py` — `ArmSpace` com ordenação estável e mapeamento rótulo ↔ índice, mais
+  `arm_distribution()` (a mistura histórica que alimenta o baseline) e `best_historical_arm()`.
+  A ordem é fixada na construção e nunca re-derivada: índices entram nos artefatos serializados,
+  e uma reordenação entre execuções rotularia todo resultado errado em silêncio.
+- `src/environment.py` — ambiente calibrado do track A. `P(y | contexto, braço)` por
+  `HistGradientBoostingClassifier` + `CalibratedClassifierCV` isotônica, com **três portões que
+  levantam exceção em vez de seguir**: calibração global e por braço, sanity check contra
+  regressão logística, e diagnóstico de sobreposição por propensão. Mais `contextual_ceiling()`,
+  que mede o teto do ganho contextual antes de qualquer política existir.
+- `src/policies.py` — `Policy` como ABC com a interface do `CLAUDE.md`, e seis implementações:
+  `LoggingPolicy`, `FixedArm`, `EpsilonGreedy`, `UCB1`, `ThompsonSampling` e `LinTS`.
+  RNG injetado em todas; nenhuma toca o estado global do numpy, e há teste que verifica isso.
+- `src/evaluation.py` — `Environment` como `typing.Protocol` estrutural, então o ambiente calibrado
+  e os testbeds sintéticos são intercambiáveis sem que nenhum módulo importe o outro. Runner
+  multi-seed, métricas com intervalo-t entre seeds e integração MLflow com runs aninhados.
+- `train.py` — entrypoint do experimento. Aceita `--rounds`, `--seeds` e `--no-mlflow`.
+- `tests/bandit_testbed.py`, `tests/test_arms.py`, `tests/test_environment.py`,
+  `tests/test_policies.py`, `tests/test_evaluation.py` — 72 testes novos, 113 no total.
+
+### Resultado
+20.000 rodadas × 10 seeds, baseline = política de log (11,01% no ambiente):
+
+| Política | CVR | Uplift | Exploração |
+|---|---:|---:|---:|
+| `FixedArm[cellular\|mid]` | 13,31% | +20,85% | 0,0% |
+| `ThompsonSampling[1.13, 8.87]` | 13,01% | +18,16% | 23,0% |
+| `EpsilonGreedy[0.05]` | 12,88% | +16,95% | 16,1% |
+| `ThompsonSampling[1, 1]` | 12,81% | +16,36% | 38,0% |
+| `UCB1[0.25]` | 12,70% | +15,38% | 41,7% |
+| `LinTS[0.05]` | 12,41% | +12,69% | 59,5% |
+
+Todas as adaptativas superam o baseline sem sobreposição de intervalos.
+
+### Decidido
+- **Hiperparâmetros por sweep, não por default.** `ε=0.05`, `c=0.25`, `v=0.05`. O `c=1.0` de
+  livro-texto do UCB1 é o **pior** valor testado (11,58%): o bônus `√(2·ln t / n)` pressupõe
+  recompensa em toda a faixa [0,1], mas aqui as médias vivem entre 5% e 15%, então o bônus domina
+  o sinal e a política explora sem parar. O sweep completo está no README, e a otimização no mesmo
+  ambiente em que se reporta virou limitação declarada.
+- **Prior informado `Beta(1.13, 8.87)` supera o uniforme** — 13,01% contra 12,81%, com 23,0% de
+  exploração contra 38,0%. Ambos permanecem no experimento: o PDF pede análise da escolha de prior.
+- **A `LinTS` não se paga, e isso é resultado, não falha.** O teto contextual medido é de apenas
+  +4,44%, e capturá-lo exigiria estimar 41 features × 6 braços = 246 parâmetros sobre recompensa
+  binária de ~11%. O custo de exploração excede o prêmio. A implementação está validada por um
+  teste que a coloca contra a Thompson comum num ambiente onde o braço ótimo depende do cliente —
+  lá ela vence. **Nestes dados o efeito do braço é quase todo não-contextual.**
+- **MLflow em SQLite, não em file store.** A partir do MLflow 3 o backend de arquivos está em modo
+  de manutenção e levanta exceção. `MLFLOW_TRACKING_URI` aponta para `sqlite:///mlflow.db` e o
+  alvo `make mlflow` passou a informar `--backend-store-uri`.
+
+### Notas
+- O ambiente carrega encoder e modelo além da matriz pré-calculada, e expõe `predict()` para linhas
+  novas. Sem isso ele serviria só para simulação, e a API da Fase 6 não teria como pontuar um
+  cliente que chega na requisição.
+- `LinTS` usa Sherman-Morrison para a inversa e cacheia o fator de Cholesky por braço, recomputando
+  só o braço que mudou. Sem isso o experimento não fecharia em tempo aceitável; com isso são 33 s
+  para 20.000 rodadas × 10 seeds.
+- A sobreposição revelou que `telephone|early` e `telephone|late` ficam abaixo de 1% de propensão
+  para 3,76% e 4,37% dos clientes — consequência direta do confounding temporal achado na Fase 1.
+  Declarado como extrapolação no README.
+
+### Verificado
+- `make test` — 113 testes, todos passando. `make lint` sem achados.
+- `make train` ponta a ponta em ~3 min, gerando artefatos, figuras e 77 runs no MLflow.
+- `duration` ausente de todo o código das Fases 2 e 3 — a única ocorrência é o teste que verifica
+  a ausência dela. As 12 colunas de contexto do ambiente foram conferidas explicitamente.
 
 ---
 

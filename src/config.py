@@ -149,3 +149,57 @@ ARM_COLUMNS: tuple[str, ...] = ("contact", WEEK_WINDOW_COLUMN)
 
 SEED = 42
 TEST_SIZE = 0.2
+
+# --- Ambiente calibrado (Fase 2) -----------------------------------------
+
+# Um modelo único com o braço como feature, não um por braço: o menor braço tem
+# ~111 conversões no treino, pouco para calibrar isoladamente.
+ENV_MAX_ITER = 300
+ENV_LEARNING_RATE = 0.05
+ENV_CALIBRATION_METHOD = "isotonic"
+ENV_CALIBRATION_CV = 5
+
+# Piso de qualidade do ambiente. Brier acima disso significa probabilidade não
+# confiável, e um ambiente descalibrado invalida todo o experimento.
+MAX_BRIER_SCORE = 0.10
+
+# Sobreposição (positividade): abaixo desta propensão o braço praticamente não
+# foi jogado naquela região do contexto, e prever ali é extrapolação.
+MIN_ARM_PROPENSITY = 0.01
+
+ENVIRONMENT_ARTIFACT = MODELS_DIR / "environment.joblib"
+
+# --- Políticas de bandit (Fase 3) ----------------------------------------
+
+# Valores escolhidos por sweep sobre o ambiente calibrado — ver README.
+# O padrão de livro-texto do UCB1 é c=1.0, mas com taxa-base de 11% o bônus
+# sqrt(2 ln t / n) domina médias pequenas e a política explora sem parar.
+EPSILON = 0.05
+UCB_C = 0.25
+
+# Prior não-informativo: Beta(1,1) é a uniforme em [0,1].
+TS_ALPHA_PRIOR = 1.0
+TS_BETA_PRIOR = 1.0
+
+# Prior informativo: mesma média da taxa-base observada (11,27%) com a força de
+# 10 observações. Entra como variante para a análise de escolha de prior.
+TS_ALPHA_PRIOR_INFORMED = 1.13
+TS_BETA_PRIOR_INFORMED = 8.87
+
+# Escala da exploração no LinTS, também por sweep. Com 41 features x 6 braços são
+# 246 parâmetros a estimar sobre recompensa binária rara, então a posterior
+# precisa ser estreita para a política sair da exploração dentro do horizonte.
+LINTS_V = 0.05
+LINTS_LAMBDA = 1.0
+
+# --- Experimento ---------------------------------------------------------
+
+N_ROUNDS = 20_000
+N_SEEDS = 10
+
+MLFLOW_EXPERIMENT = "tc5-bandit"
+
+# SQLite, não o file store: a partir do MLflow 3 o backend de arquivos está em
+# modo de manutenção e levanta exceção. `mlflow ui` precisa do mesmo URI.
+MLFLOW_DB = PROJECT_ROOT / "mlflow.db"
+MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB}"

@@ -12,6 +12,37 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 Próxima: **Fase 5** — Golden Set com 5 clientes, `p̂` por braço e justificativa de negócio.
 
+### Adicionado
+- `src/scenarios.py` e `tests/test_scenarios.py` (13 testes) — análise de sensibilidade temporal.
+  `channel_confounding_report()` mede quanto do efeito de canal é, na verdade, calendário.
+- Seção dedicada no README quantificando a limitação principal do projeto.
+
+### Corrigido
+- **O portão de calibração do ambiente estava errado desde a Fase 2.** Usava piso **absoluto** de
+  Brier em 0,10 — que por coincidência é exatamente `p(1-p)` da base completa, o que fazia o número
+  parecer princípio. Num recorte com taxa-base de 14,5% a referência é 0,1240, e um Brier de 0,1061
+  seria rejeitado apesar de bom. Trocado por **Brier Skill Score** (`1 - brier/p(1-p)`), que é
+  relativo e transfere entre recortes. O ambiente principal tem skill de 0,141.
+
+### Notas — a limitação principal, com número
+- **A vantagem do celular sobre o telefone fixo é inflada 9,4x pelo confounding temporal.** Medida
+  na base completa dá **+181,7%**; medida dentro da janela onde os dois canais rodaram lado a lado,
+  **+19,3%**. Os braços de fixo saltam de ~5% para ~12,5% de conversão quando o calendário sai da
+  comparação; os de celular não se movem, porque ele só existiu na janela tardia.
+- **Consequência sobre o resultado principal:** o uplift de +18,2% pressupõe que o efeito de canal
+  seja causal. Sob a leitura conservadora fica em torno de **+8% a +9%**. A decisão da política
+  segue correta — `cellular|mid` é o melhor braço dado o log — mas a magnitude precisa da ressalva.
+- **Restringir a base à coexistência foi testado e descartado:** lá o baseline já usa celular em 90%
+  das ligações e nenhuma política adaptativa o supera (14,54% contra 14,50%). Ficaria causalmente
+  limpo e inteiramente nulo.
+- **O cenário de "braço novo" foi testado e deu negativo:** uma regra congelada antes de o celular
+  existir perde só +2,8% depois que ele aparece. Este dataset não oferece o contraexemplo de "regra
+  fixa quebra quando o mundo muda", e o README diz isso em vez de sugerir o contrário.
+- **Trocar de dataset foi avaliado e descartado.** As quatro bases sugeridas pelo enunciado são
+  variações da mesma campanha bancária portuguesa — mesmo confounding. Sair da lista exigiria
+  refazer as Fases 1 a 4 e perder o domínio financeiro, com risco de cronograma desproporcional ao
+  ganho. O enunciado pede documentar limitações, e é o que fazemos.
+
 ---
 
 ## [0.6.0] — 2026-08-24 — Fase 4: replay sobre o log real

@@ -98,9 +98,23 @@ def test_environment_is_calibrated(fitted) -> None:
     """Gate one: probabilities have to mean what they say."""
     _, diagnostics, _ = fitted
 
-    assert diagnostics.brier <= config.MAX_BRIER_SCORE
+    assert diagnostics.brier_skill >= config.MIN_BRIER_SKILL
+    assert diagnostics.brier < diagnostics.brier_reference
     total = diagnostics.calibration.query("arm == 'TOTAL'").iloc[0]
     assert total["gap"] < 0.01
+
+
+def test_brier_skill_is_relative_to_the_base_rate(fitted) -> None:
+    """An absolute Brier floor does not transfer between slices, a skill one does."""
+    _, diagnostics, _ = fitted
+    base_rate = diagnostics.calibration.query("arm == 'TOTAL'").iloc[0]["observed"]
+
+    assert diagnostics.brier_reference == pytest.approx(
+        base_rate * (1 - base_rate), abs=1e-6
+    )
+    assert diagnostics.brier_skill == pytest.approx(
+        1 - diagnostics.brier / diagnostics.brier_reference, abs=1e-9
+    )
 
 
 def test_every_arm_is_calibrated_not_just_the_total(fitted) -> None:
@@ -132,7 +146,7 @@ def test_overlap_is_reported_for_every_arm(fitted) -> None:
 
 def test_uncalibrated_environment_refuses_to_build(prepared, monkeypatch) -> None:
     """The gate must actually stop the pipeline, not just warn."""
-    monkeypatch.setattr(config, "MAX_BRIER_SCORE", 0.0001)
+    monkeypatch.setattr(config, "MIN_BRIER_SKILL", 0.99)
     train, test = data.split_train_test(prepared)
 
     with pytest.raises(EnvironmentError, match="descalibrado"):

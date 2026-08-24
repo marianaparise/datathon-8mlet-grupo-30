@@ -406,7 +406,7 @@ make data    # baixa a base do Kaggle para data/raw/
 make train   # roda o experimento ponta a ponta e serializa os artefatos
 make api     # sobe a API em http://localhost:8000/docs   (Fase 6)
 make mlflow  # abre a UI do MLflow em http://localhost:5000
-make test    # roda a suíte de testes — 113 no total
+make test    # roda a suíte de testes — 144 no total
 make lint    # checa estilo e erros estáticos com ruff
 ```
 
@@ -446,16 +446,68 @@ _A preencher._
 <!-- Fase 7: base legal, finalidade, minimização, retenção, humano no loop -->
 _A preencher._
 
+## A limitação principal: quanto do efeito de canal é calendário?
+
+Esta é a ressalva mais séria do projeto, e ela tem número. Vale ler antes de citar qualquer uplift.
+
+**O problema.** A campanha não usou os dois canais ao mesmo tempo. O primeiro quarto do log é
+**100% telefone fixo**, e a partir do segundo o celular passa de 90% do volume. No mesmo intervalo
+a taxa-base de conversão sobe de 3,5% para 47%, empurrada por conjuntura e por mudança de
+segmentação. Como o período **não está no contexto** — tiramos os indicadores macro justamente por
+serem carimbo de calendário — o ambiente atribui ao canal aquilo que era da época.
+
+**A medida.** Restringir a análise à janela onde os dois canais rodaram lado a lado remove o
+calendário da comparação. O que sobra:
+
+| Braço | Base completa | Só na coexistência | Diferença |
+|---|---:|---:|---:|
+| `cellular\|mid` | 15,47% | 15,47% | — |
+| `cellular\|late` | 14,55% | 14,55% | — |
+| `cellular\|early` | 12,79% | 12,79% | — |
+| `telephone\|mid` | 5,38% | **12,94%** | +7,56 p.p. |
+| `telephone\|late` | 5,34% | **12,55%** | +7,21 p.p. |
+| `telephone\|early` | 4,67% | **10,43%** | +5,76 p.p. |
+
+Os braços de celular não se movem — ele só existiu na janela tardia. Os de telefone fixo **mais que
+dobram**.
+
+```
+vantagem do celular sobre o fixo, base completa  →  +181,7%
+vantagem do celular sobre o fixo, na coexistência →   +19,3%
+                                                      ───────
+                              inflação do número  →     9,4x
+```
+
+**O que isso faz com o resultado principal.** O uplift de +18,2% da melhor adaptativa sobre o
+baseline vem em boa parte de o baseline carregar o primeiro quarto da campanha, quando todas as
+ligações eram no fixo e a conversão era 3,5%. O bandit "ganha" evitando os braços de fixo — que
+eram ruins sobretudo pela **época** em que foram usados.
+
+A decisão que a política toma continua correta: dado o log, `cellular|mid` **é** o melhor braço, e o
+baseline de fato jogava 36% de telefone fixo e de fato converteu 11,27%. O que fica em dúvida é a
+**magnitude**: o ganho medido pressupõe que o efeito de canal seja causal. Sob a leitura
+conservadora — só o que sobrevive dentro da janela de coexistência — ele fica mais perto de
+**+8% a +9%** do que dos +18,2%.
+
+**Por que não corrigimos restringindo a base.** Testamos. Na janela de coexistência a campanha já
+usava celular em 90% das ligações, então o baseline já estava quase ótimo e **nenhuma política
+adaptativa o supera** (baseline 14,54%, melhor adaptativa 14,50%). Restringir tornaria a análise
+causalmente mais limpa e o resultado inteiramente nulo — a operação já tinha aprendido a lição que o
+bandit teria ensinado.
+
+**E o bandit resgataria uma regra congelada?** Também testamos, e **não**. Uma regra fixa escolhida
+antes de o celular existir fica presa em `telephone|late`; quando o celular aparece, o custo de não
+migrar é de apenas **+2,8%** — porque dentro daquela janela os canais são próximos. Este dataset
+não oferece o contraexemplo de "a regra fixa quebra quando o mundo muda". Reprodutível em
+[`src/scenarios.py`](src/scenarios.py).
+
 ## Limitações
 
 Registradas desde já, porque condicionam a leitura de qualquer resultado:
 
 - **Viés do log histórico.** O ambiente do track A é calibrado sobre decisões que o banco tomou por
   critério operacional, não aleatoriamente. Ele herda esse viés.
-- **Confounding temporal em `contact`.** Os dois primeiros períodos da campanha (mai/jun de 2008)
-  são **100% telefone fixo**; a partir de agosto o celular passa de 97%. Parte da vantagem medida
-  do celular é a época em que ele foi usado, não o canal. Separar as duas coisas exigiria ter
-  contatado o mesmo perfil pelos dois canais no mesmo período, e a operação não fez isso.
+- **Confounding temporal em `contact` — quantificado, e é grande.** Ver a seção dedicada abaixo.
 - **Os cinco indicadores macro são proxies de calendário**, com R² de 1,0000 contra o índice de
   período. Ficam fora do contexto padrão do ambiente justamente por isso; mantidos como ablação.
 - **A heterogeneidade braço × contexto é fraca.** Nas estratificações testadas (`job`,
@@ -489,7 +541,8 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 │   ├── environment.py    # P(y | contexto, braço) calibrado + portões de qualidade
 │   ├── policies.py       # baseline, ε-greedy, UCB1, Thompson, LinTS
 │   ├── evaluation.py     # protocolo de ambiente, runner multi-seed, métricas, MLflow
-│   └── replay.py         # rejection sampling, IPS e comparação entre os dois tracks
+│   ├── replay.py         # rejection sampling, IPS e comparação entre os dois tracks
+│   └── scenarios.py      # análise de sensibilidade temporal e confounding de canal
 ├── api/                  # serviço FastAPI                              (Fase 6)
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento

@@ -187,7 +187,8 @@ def report_environment(diagnostics: EnvironmentDiagnostics, space: ArmSpace) -> 
     print("\n=== AMBIENTE ===")
     print(
         f"AUC {diagnostics.auc:.4f} (logística {diagnostics.baseline_auc:.4f}) | "
-        f"Brier {diagnostics.brier:.4f} (piso {config.MAX_BRIER_SCORE})"
+        f"Brier {diagnostics.brier:.4f} vs ref {diagnostics.brier_reference:.4f} "
+        f"| skill {diagnostics.brier_skill:.4f} (piso {config.MIN_BRIER_SKILL})"
     )
     print("\ncalibração por braço:")
     print(diagnostics.calibration.round(4).to_string(index=False))
@@ -293,6 +294,7 @@ def main() -> None:
                     "auc": round(diagnostics.auc, 4),
                     "baseline_auc": round(diagnostics.baseline_auc, 4),
                     "brier": round(diagnostics.brier, 4),
+                    "brier_skill": round(diagnostics.brier_skill, 4),
                     "contextual_ceiling_relative": round(
                         diagnostics.ceiling.relative_gain, 4
                     ),

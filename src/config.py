@@ -159,9 +159,14 @@ ENV_LEARNING_RATE = 0.05
 ENV_CALIBRATION_METHOD = "isotonic"
 ENV_CALIBRATION_CV = 5
 
-# Piso de qualidade do ambiente. Brier acima disso significa probabilidade não
-# confiável, e um ambiente descalibrado invalida todo o experimento.
-MAX_BRIER_SCORE = 0.10
+# Piso de qualidade do ambiente, em **Brier Skill Score**: 1 - brier/brier_ref,
+# onde brier_ref = p(1-p) é o Brier de quem chuta a taxa-base para todo mundo.
+#
+# Relativo, não absoluto. Um piso absoluto de Brier não transfere entre recortes
+# com taxa-base diferente: 0,10 é bom numa base que converte 11% e trivialmente
+# atingível numa que converte 3%. Skill negativo significa que o modelo é pior
+# que chutar a média — aí sim o ambiente não presta.
+MIN_BRIER_SKILL = 0.05
 
 # Sobreposição (positividade): abaixo desta propensão o braço praticamente não
 # foi jogado naquela região do contexto, e prever ali é extrapolação.

@@ -72,7 +72,13 @@ e diagnóstico de sobreposição.
 
 ✅ **Fase 4** — `src/replay.py`. Rejection sampling com IPS sobre o log real. **Spearman = 0,857**
 entre os rankings dos dois tracks: o ambiente calibrado não está inventando a ordem.
-**130 testes no total.**
+**144 testes no total.**
+
+⚠️ **A Fase 4 também revelou a limitação principal do projeto.** A vantagem do celular sobre o
+telefone fixo é **inflada 9,4x** pelo confounding temporal: +181,7% na base completa contra +19,3%
+dentro da janela em que os dois canais rodaram lado a lado. Consequência: o uplift de +18,2% supõe
+que o efeito de canal seja causal; sob leitura conservadora fica em **+8% a +9%**. Está documentado
+com número no README, e é o material mais forte da seção de limitações.
 
 ❌ `api/` continua vazio. O Golden Set (Fase 5) ainda não existe.
 
@@ -203,9 +209,19 @@ da Etapa 3.
 
 ## 5. Decisões em aberto — precisamos bater martelo
 
-**6 das 8 fechadas.** Restam a **#7** (divisão de trabalho das Fases 4–7 e o vídeo) e a **#8**
-(o que fazer com a política contextual). As resolvidas ficam registradas com o racional — quem
-chegar depois precisa saber por que, não só o quê.
+**7 das 9 fechadas.** Restam a **#7** (divisão de trabalho e vídeo) e a **#8** (o que fazer com a
+política contextual). As resolvidas ficam registradas com o racional — quem chegar depois precisa
+saber por que, não só o quê.
+
+### ~~9. Trocar de dataset?~~ — ✅ **RESOLVIDA: não**
+Levantado depois que a Fase 4 revelou o tamanho do confounding temporal. As quatro bases sugeridas
+pelo enunciado são variações da **mesma campanha bancária portuguesa** — trocar entre elas não muda
+nada. Sair da lista é permitido pelo PDF, e uma base com ação aleatorizada resolveria o problema por
+desenho, mas custaria **refazer as Fases 1 a 4** e perder o domínio financeiro.
+
+**Decisão: manter a base e documentar a limitação com número.** O enunciado exige documentar
+limitações, e a tabela de avaliação diz que o baseline serve para mostrar "ganho **ou limitação**"
+da política adaptativa.
 
 ### ~~1. Como obter a base~~ — ✅ **RESOLVIDA**
 `make data` funciona sem credencial nenhuma. O script

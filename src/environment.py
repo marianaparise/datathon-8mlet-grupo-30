@@ -338,6 +338,10 @@ class EnvironmentDiagnostics:
         auc: Test AUC of the calibrated model.
         baseline_auc: Test AUC of the logistic sanity check.
         brier: Global Brier score on the test fold.
+        brier_reference: Brier of predicting the base rate for everyone.
+        brier_skill: ``1 - brier / brier_reference``. Positive means the model
+            beats the base rate; this is the quantity the gate checks, because
+            raw Brier is not comparable across slices with different base rates.
     """
 
     calibration: pd.DataFrame
@@ -346,6 +350,8 @@ class EnvironmentDiagnostics:
     auc: float
     baseline_auc: float
     brier: float
+    brier_reference: float
+    brier_skill: float
 
 
 def build_environment(
@@ -359,9 +365,9 @@ def build_environment(
     """Fit ``P(y | context, arm)`` on train and validate it on test.
 
     Raises:
-        EnvironmentError: If the Brier score exceeds ``config.MAX_BRIER_SCORE``.
-            An uncalibrated environment produces confident nonsense, and every
-            downstream number would inherit it.
+        EnvironmentError: If the Brier skill falls below
+            ``config.MIN_BRIER_SKILL``. An uncalibrated environment produces
+            confident nonsense, and every downstream number would inherit it.
     """
     encoder = build_context_encoder(include_macro=include_macro)
     train_context = encoder.fit_transform(
@@ -391,9 +397,18 @@ def build_environment(
     y_prob = model.predict_proba(played)[:, 1]
 
     brier = float(brier_score_loss(y_test, y_prob))
-    if brier > config.MAX_BRIER_SCORE:
+
+    # Referência: o Brier de quem prevê a taxa-base para todo cliente. É contra
+    # ela que o modelo precisa mostrar ganho — o valor absoluto do Brier depende
+    # da taxa-base do recorte e não diz sozinho se o ambiente presta.
+    base_rate = float(y_test.mean())
+    brier_reference = base_rate * (1.0 - base_rate)
+    brier_skill = 1.0 - brier / brier_reference if brier_reference else 0.0
+
+    if brier_skill < config.MIN_BRIER_SKILL:
         raise EnvironmentError(
-            f"Brier {brier:.4f} acima do piso {config.MAX_BRIER_SCORE}. "
+            f"Brier skill {brier_skill:.4f} abaixo do piso {config.MIN_BRIER_SKILL} "
+            f"(brier {brier:.4f} contra referência {brier_reference:.4f}). "
             "Ambiente descalibrado — não seguir para o experimento."
         )
 
@@ -415,6 +430,8 @@ def build_environment(
         auc=float(roc_auc_score(y_test, y_prob)),
         baseline_auc=float(roc_auc_score(y_test, baseline.predict_proba(played)[:, 1])),
         brier=brier,
+        brier_reference=brier_reference,
+        brier_skill=brier_skill,
     )
 
     environment = CalibratedEnvironment(

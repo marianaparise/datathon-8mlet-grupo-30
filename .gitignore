@@ -35,7 +35,6 @@ kaggle.json
 
 # Terraform
 infra/.terraform/
-infra/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars

@@ -624,9 +624,13 @@ cp terraform.tfvars.example terraform.tfvars
 terraform init && terraform plan
 ```
 
-> ⚠️ **Não foi aplicado nem validado.** `terraform validate` e `terraform fmt` ainda não rodaram —
-> não havia Terraform instalado na máquina de desenvolvimento. E `terraform apply` cria recursos
-> cobrados (ALB e NAT são os caros). Trate como desenho revisável, não como infraestrutura testada.
+**Verificado:** `terraform fmt -check -recursive` sem diff e `terraform validate` com *Success* no
+Terraform 1.15.9, provider AWS 5.100.0 (fixado em `.terraform.lock.hcl`, versionado). `make tf-check`
+repete as duas checagens.
+
+> ⚠️ **Não foi aplicado.** `terraform plan` exige credencial AWS e `apply` cria recursos cobrados —
+> o ALB é o mais caro do desenho. A configuração é válida e está formatada, mas **nunca subiu**:
+> trate como desenho revisado, não como infraestrutura em produção.
 
 Três decisões que valem explicação:
 

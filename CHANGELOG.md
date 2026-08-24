@@ -33,11 +33,17 @@ Próxima: **Fase 8** — vídeo pitch. Última etapa; fica com a Mariana.
 - Firehose com DynamoDB é exatamente a peça que falta para o `?explore=true` da API deixar de ser
   sem estado. A infraestrutura está desenhada; a aplicação ainda não a usa.
 
-### Verificado — e o que não foi
-- ⚠️ **O Terraform não foi validado nem aplicado.** Não havia binário do Terraform na máquina de
-  desenvolvimento, então `terraform validate` e `terraform fmt` não rodaram. Registrado como
-  pendência no README em vez de apresentado como testado.
+### Verificado
+- **`terraform fmt -check -recursive` sem diff** e **`terraform validate` com *Success***, no
+  Terraform 1.15.9 com provider AWS 5.100.0. Alvo `make tf-check` repete as duas.
+- `.terraform.lock.hcl` **passou a ser versionado** — foi ignorado por engano na primeira versão.
+  Ele fixa a versão exata do provider, que é justamente o que torna o `init` reproduzível; a
+  recomendação da HashiCorp é commitá-lo.
 - `.gitignore` cobre `*.tfvars`, `*.tfstate*` e `.terraform/`, preservando o `.tfvars.example`.
+
+### Não verificado
+- ⚠️ **`terraform plan` e `apply` não rodaram.** `plan` exige credencial AWS; `apply` cria recursos
+  cobrados. A configuração é válida e formatada, mas nunca subiu.
 
 ### Adicionado — Fase 6, o serviço (Etapa 5)
 - `api/app.py` e `api/schemas.py` — `POST /recommend` devolvendo o ranking dos seis braços,

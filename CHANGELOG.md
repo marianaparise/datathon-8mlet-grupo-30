@@ -10,13 +10,67 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 ## [Não lançado]
 
-Próxima: **Fase 4** — `src/replay.py`, rejection sampling sobre o log real como contraprova do
-ambiente calibrado, com ponderação IPS e comparação do ranking de políticas entre os dois tracks.
+Próxima: **Fase 5** — Golden Set com 5 clientes, `p̂` por braço e justificativa de negócio.
+
+---
+
+## [0.6.0] — 2026-08-24 — Fase 4: replay sobre o log real
+
+Fecha o track C e, com ele, a estratégia de avaliação A+C completa. O ambiente calibrado deixa de
+ser palavra contra palavra: existe agora uma segunda medida, por um caminho que não passa por
+modelo nenhum.
+
+### Adicionado
+- `src/replay.py` — rejection sampling (Li, Chu, Langford & Wang, WSDM 2011). Percorre o log
+  embaralhado e só conta o evento quando a política escolhe o braço que foi de fato jogado; a
+  recompensa é o `y` observado. Eventos rejeitados são descartados inteiros, sem update, que é o
+  que mantém o fluxo aceito consistente com um mundo onde a política teria decidido.
+- Estimador **IPS auto-normalizado** (Hájek) com piso de propensão, mais taxa de aceitação e
+  tamanho efetivo de amostra (Kish) — as três coisas que dizem quanto confiar em cada linha.
+- `compare_tracks()` e `rank_agreement()` — os dois tracks lado a lado, com Spearman.
+- `fit_arm_propensity()` em `src/environment.py`, agora compartilhado entre o diagnóstico de
+  positividade da Fase 2 e a ponderação da Fase 4.
+- `tests/test_replay.py` — 17 testes. **130 no total.**
+
+### Resultado
+| Política | Ambiente | Replay (IPS) | Rank A | Rank C |
+|---|---:|---:|:-:|:-:|
+| `FixedArm[cellular\|mid]` | 13,31% | 14,00% | 1 | 1 |
+| `ThompsonSampling[1.13, 8.87]` | 13,01% | 12,37% | 2 | 4 |
+| `EpsilonGreedy` | 12,88% | 13,50% | 3 | 2 |
+| `ThompsonSampling[1, 1]` | 12,81% | 12,55% | 4 | 3 |
+| `UCB1` | 12,70% | 12,07% | 5 | 5 |
+| `LinTS` | 12,41% | 11,27% | 6 | 7 |
+| `LoggingPolicy` | 11,01% | 11,48% | 7 | 6 |
+
+**Spearman = 0,857.** Os dois métodos ordenam quase igual, apesar de um simular 20.000 decisões
+contra um modelo e o outro peneirar 8.238 linhas de log real.
+
+### Notas
+- **A triangulação da `FixedArm` é o achado mais forte do projeto.** Replay cru 15,47% → replay com
+  IPS 14,00% → ambiente calibrado 13,31%. O replay cru é otimista por seleção: quem recebeu
+  `cellular|mid` não era recorte aleatório. A ponderação move a estimativa três quartos do caminho
+  até o número do ambiente. Dois métodos sem premissa em comum chegando ao mesmo lugar.
+- **A vantagem do prior informado não se replica.** 2º no ambiente, 4º no replay. O que reproduz nos
+  dois tracks é a diferença de exploração (23,0% contra 38,0%) — o prior acelera a convergência, mas
+  o efeito na conversão final está dentro do ruído.
+- **A `LinTS` cai para último no replay, abaixo do baseline.** Segunda evidência independente, sem
+  modelo no caminho, de que a política contextual não entrega nestes dados. Os intervalos se
+  sobrepõem, então "pior que o baseline" não é afirmável — mas "melhor" também deixa de ser.
+- Custo do método: o replay descarta de 61% a 83% do log conforme a política. A `LinTS` fica com 787
+  eventos efetivos de 8.238, e por isso tem os intervalos mais largos da tabela.
+
+### Verificado
+- `make test` — 130 testes, todos passando. `make lint` sem achados.
+- `make train` roda os dois tracks ponta a ponta em ~3 min.
+
+---
+
+## [0.5.1] — 2026-08-24 — Nome do repositório
 
 ### Decidido
-- **Nome do repositório: `datathon-8mlet-grupo-30`** — turma 8MLET, grupo 30. O `7mlet` do enunciado
-  era exemplo, não exigência. Fecha a decisão em aberto #3 do briefing; restam a #7 (divisão de
-  trabalho e vídeo) e a #8 (o que fazer com a política contextual).
+- **`datathon-8mlet-grupo-30`** — turma 8MLET, grupo 30. O `7mlet` do enunciado era exemplo, não
+  exigência. Fecha a decisão em aberto #3 do briefing.
 
 ### Alterado
 - `git remote` local atualizado para a URL nova. O GitHub redirecionava o nome antigo, então tudo

@@ -28,6 +28,7 @@ from src.environment import (  # noqa: E402
     CalibratedEnvironment,
     EnvironmentDiagnostics,
     build_environment,
+    fit_arm_propensity,
 )
 from src.evaluation import (  # noqa: E402
     ExperimentResult,
@@ -44,6 +45,13 @@ from src.policies import (  # noqa: E402
     LoggingPolicy,
     Policy,
     ThompsonSampling,
+)
+from src.replay import (  # noqa: E402
+    compare_tracks,
+    inverse_propensity_weights,
+    rank_agreement,
+    replay_experiment,
+    summarize_replay,
 )
 
 PolicyFactory = Callable[[np.random.Generator], Policy]
@@ -145,6 +153,35 @@ def plot_curves(results: list[ExperimentResult], space: ArmSpace) -> None:
     plt.close(fig)
 
 
+def run_replay_track(
+    env: CalibratedEnvironment,
+    test: pd.DataFrame,
+    space: ArmSpace,
+    shares: np.ndarray,
+    best_arm: int,
+    n_seeds: int,
+) -> pd.DataFrame:
+    """Replay the same line-up over the real log, using only observed rewards.
+
+    The contraprova to the calibrated environment: no model stands between the
+    policy and the outcome here, so the two tracks are wrong in different ways.
+    """
+    features = env.encode(test)
+    arms = space.encode(test[config.ARM_COLUMN])
+    rewards = test[config.TARGET_BINARY].to_numpy(dtype=float)
+
+    propensity_model = fit_arm_propensity(features, arms)
+    weights = inverse_propensity_weights(propensity_model.predict_proba(features), arms)
+
+    results = [
+        replay_experiment(
+            factory, features, arms, rewards, weights, seeds=range(n_seeds)
+        )
+        for factory, _ in build_policies(env, shares, best_arm).values()
+    ]
+    return summarize_replay(results)
+
+
 def report_environment(diagnostics: EnvironmentDiagnostics, space: ArmSpace) -> None:
     """Print the three quality gates before anything downstream is trusted."""
     print("\n=== AMBIENTE ===")
@@ -223,14 +260,26 @@ def main() -> None:
         )
 
     table = summarize(results, baseline=results[0].policy)
-    print("\n=== RESULTADO ===")
+    print("\n=== RESULTADO — TRACK A (ambiente calibrado) ===")
     print(table.round(4).to_string(index=False))
+
+    replay_table = run_replay_track(env, test, space, shares, best_arm, args.seeds)
+    print("\n=== RESULTADO — TRACK C (replay sobre o log real) ===")
+    print(replay_table.round(4).to_string(index=False))
+
+    comparison = compare_tracks(table, replay_table)
+    agreement = rank_agreement(comparison)
+    print("\n=== OS DOIS TRACKS LADO A LADO ===")
+    print(comparison.round(4).to_string(index=False))
+    print(f"\nSpearman entre os rankings: {agreement:.3f}")
 
     plot_curves(results, space)
 
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(env, config.ENVIRONMENT_ARTIFACT)
     table.to_csv(config.MODELS_DIR / "results.csv", index=False)
+    replay_table.to_csv(config.MODELS_DIR / "results_replay.csv", index=False)
+    comparison.to_csv(config.MODELS_DIR / "track_comparison.csv", index=False)
     (config.MODELS_DIR / "metadata.json").write_text(
         json.dumps(
             {
@@ -249,6 +298,7 @@ def main() -> None:
                     ),
                     "switch_share": round(diagnostics.ceiling.switch_share, 4),
                 },
+                "track_agreement_spearman": round(agreement, 4),
             },
             indent=2,
             ensure_ascii=False,

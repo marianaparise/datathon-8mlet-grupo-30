@@ -13,7 +13,7 @@ Decisões e restrições em `CLAUDE.md`.
 | 1 ✅ | Dados e EDA | Etapas 1 e 2 |
 | 2 ✅ | Braços e ambiente calibrado | base da Etapa 3 |
 | 3 ✅ | Políticas e experimentos | Etapas 3 e 7 |
-| 4 | Replay sobre o log real | validação da Etapa 3 |
+| 4 ✅ | Replay sobre o log real | validação da Etapa 3 |
 | 5 | Métricas e Golden Set | Etapa 4 |
 | 6 | API e Docker | Etapa 5 |
 | 7 | README consolidado e arquitetura em nuvem | Etapas 0, 1, 6 |
@@ -159,13 +159,13 @@ o baseline principal é a **regra fixa**, com o melhor braço histórico como co
 
 **Validação da Etapa 3. É o track C.**
 
-- [ ] `src/replay.py`: rejection sampling (Li et al., WSDM 2011) sobre o conjunto de teste
-  - [ ] percorre o log; aceita o evento quando o braço escolhido coincide com o braço registrado
-  - [ ] recompensa = `y` observado, nunca estimado
-  - [ ] reporta taxa de aceitação e tamanho efetivo da amostra
-- [ ] Ponderação por propensity (IPS) para atenuar o viés da política de log
-- [ ] Comparar o ranking de políticas obtido no replay com o obtido no ambiente calibrado
-- [ ] Documentar as ressalvas: a política de log não era aleatória uniforme, então a garantia de
+- [x] `src/replay.py`: rejection sampling (Li et al., WSDM 2011) sobre o conjunto de teste
+  - [x] percorre o log; aceita o evento quando o braço escolhido coincide com o braço registrado
+  - [x] recompensa = `y` observado, nunca estimado
+  - [x] reporta taxa de aceitação e tamanho efetivo da amostra
+- [x] Ponderação por propensity (IPS) para atenuar o viés da política de log
+- [x] Comparar o ranking de políticas obtido no replay com o obtido no ambiente calibrado
+- [x] Documentar as ressalvas: a política de log não era aleatória uniforme, então a garantia de
       não-viés do replay não se aplica integralmente
 
 **Critério de sucesso:** o ranking das políticas se preserva entre os dois tracks. Se divergir, isso

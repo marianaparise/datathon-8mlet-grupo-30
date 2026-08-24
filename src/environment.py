@@ -154,17 +154,30 @@ def calibration_report(
     return report
 
 
+def fit_arm_propensity(
+    features: np.ndarray, arms: np.ndarray, *, seed: int = config.SEED
+) -> LogisticRegression:
+    """Model ``P(arm | context)`` — the logging policy, reconstructed.
+
+    Used twice: to check positivity here, and to weight the replay of Phase 4.
+    The bank did not choose channel and timing at random, and both jobs need a
+    handle on how it *did* choose.
+    """
+    model = LogisticRegression(max_iter=1_000, random_state=seed)
+    model.fit(features, arms)
+    return model
+
+
 def overlap_report(
     features: np.ndarray, arms: np.ndarray, space: ArmSpace, *, seed: int = config.SEED
 ) -> pd.DataFrame:
     """Positivity check: does every arm have support across the context space?
 
-    Fits ``P(arm | context)`` and reports how low that propensity gets. Where an
-    arm is essentially never played, predicting its outcome is extrapolation
-    rather than interpolation, and the README has to say so.
+    Reports how low ``P(arm | context)`` gets. Where an arm is essentially never
+    played, predicting its outcome is extrapolation rather than interpolation,
+    and the README has to say so.
     """
-    model = LogisticRegression(max_iter=1_000, random_state=seed)
-    model.fit(features, arms)
+    model = fit_arm_propensity(features, arms, seed=seed)
     propensity = model.predict_proba(features)
 
     rows = []

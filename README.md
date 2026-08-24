@@ -2,9 +2,9 @@
 
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
-> 🚧 **Em construção.** O projeto está na Fase 3 de 8 do plano de implementação.
-> Etapas 1, 2, 3 e 7 do enunciado entregues; faltam o replay, o Golden Set, a API e o vídeo.
-> As seções de resultados, Golden Set e arquitetura em nuvem serão preenchidas conforme as fases avançam.
+> 🚧 **Em construção.** O projeto está na Fase 4 de 8 do plano de implementação.
+> Etapas 1, 2, 3 e 7 do enunciado entregues, com os dois tracks de avaliação fechados;
+> faltam o Golden Set, a API e o vídeo.
 >
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
 > decisões tomadas com o racional, decisões em aberto e referências de estudo.
@@ -300,6 +300,86 @@ aqui as médias vivem entre 5% e 15% — o bônus domina o sinal e a política n
 
 ![Onde cada política gastou o tráfego](reports/figures/puxadas_por_braco.png)
 
+## O replay: a contraprova sem modelo no meio
+
+Tudo acima veio do ambiente calibrado, que é um **modelo**. A crítica óbvia — "vocês testaram a
+política contra a própria estimativa de vocês" — é justa, e o track C existe para respondê-la com
+evidência em vez de argumento.
+
+O método é rejection sampling
+([Li, Chu, Langford & Wang, WSDM 2011](https://arxiv.org/abs/1003.5956)): percorre o log real, e só
+conta o evento quando a política escolhe exatamente o braço que foi de fato jogado. Aí a recompensa
+é o `y` observado — **nunca estimado**. Como não há modelo no caminho, os dois tracks erram por
+motivos diferentes; concordância entre eles é evidência de verdade.
+
+| Política | CVR replay | CVR com IPS | IC 95% (IPS) | Aceitação | n aceito | n efetivo |
+|---|---:|---:|---|---:|---:|---:|
+| `FixedArm[cellular\|mid]` | 15,47% | **14,00%** | [14,00%; 14,00%] | 38,8% | 3.193 | 3.000 |
+| `EpsilonGreedy` | 15,25% | **13,50%** | [13,31%; 13,70%] | 33,3% | 2.741 | 2.127 |
+| `ThompsonSampling[1, 1]` | 13,99% | 12,55% | [11,85%; 13,25%] | 20,3% | 1.671 | 984 |
+| `ThompsonSampling[1.13, 8.87]` | 14,43% | 12,37% | [11,95%; 12,80%] | 24,0% | 1.978 | 1.242 |
+| `UCB1` | 13,88% | 12,07% | [11,55%; 12,58%] | 17,3% | 1.424 | 903 |
+| `LoggingPolicy` | 12,28% | 11,48% | [10,70%; 12,25%] | 24,1% | 1.983 | 1.022 |
+| `LinTS` | 12,25% | 11,27% | [10,26%; 12,28%] | 18,4% | 1.511 | 787 |
+
+A coluna **IPS** corrige o viés da política de log por ponderação de propensão inversa: o banco não
+escolheu braço ao acaso, então o replay puro herda as preferências dele. O estimador é
+auto-normalizado (Hájek), e os pesos têm piso — sem ele, uma linha com propensão de 1e-6 decidiria
+a estimativa sozinha.
+
+**Aceitação e n efetivo são o custo do método.** Com 6 braços, uma política concentrada aceita ~39%
+do log e uma exploratória ~17%. A `LinTS` fica com 787 eventos efetivos de 8.238 — daí seus
+intervalos serem os mais largos da tabela.
+
+### Os dois tracks concordam
+
+| Política | Ambiente | Replay (IPS) | Rank A | Rank C | Δ |
+|---|---:|---:|:-:|:-:|:-:|
+| `FixedArm[cellular\|mid]` | 13,31% | 14,00% | 1 | 1 | 0 |
+| `ThompsonSampling[1.13, 8.87]` | 13,01% | 12,37% | 2 | 4 | **+2** |
+| `EpsilonGreedy` | 12,88% | 13,50% | 3 | 2 | −1 |
+| `ThompsonSampling[1, 1]` | 12,81% | 12,55% | 4 | 3 | −1 |
+| `UCB1` | 12,70% | 12,07% | 5 | 5 | 0 |
+| `LinTS` | 12,41% | 11,27% | 6 | **7** | +1 |
+| `LoggingPolicy` | 11,01% | 11,48% | 7 | 6 | −1 |
+
+**Spearman = 0,857.** Os dois métodos ordenam as políticas quase igual, apesar de um simular 20.000
+decisões contra um modelo e o outro peneirar um log real de 8.238 linhas. O ambiente calibrado não
+está inventando um ranking.
+
+### A triangulação que fecha o argumento
+
+O caso mais instrutivo é a `FixedArm`, porque três estimativas independentes convergem:
+
+```
+replay cru (só os eventos cellular|mid do log)  →  15,47%
+replay corrigido por propensão inversa          →  14,00%
+ambiente calibrado                              →  13,31%
+```
+
+O replay cru é **otimista**, e o motivo é seleção: os clientes que de fato receberam `cellular|mid`
+não eram um recorte aleatório — a operação escolhia quem ligar. A ponderação IPS corrige boa parte
+desse viés e move a estimativa **três quartos do caminho** até o número do ambiente, que corrige o
+resto por modelagem.
+
+Dois métodos que não compartilham nenhuma premissa chegando ao mesmo lugar é a evidência mais forte
+deste README.
+
+### Onde os tracks discordam — e o que isso muda
+
+**A vantagem do prior informado não se replica.** No ambiente ele é 2º; no replay, 4º. O ganho de
++0,20 p.p. sobre o prior uniforme não sobrevive quando medido só com recompensa observada. A
+conclusão honesta é que **o prior informado acelera a convergência** — a diferença de exploração,
+23,0% contra 38,0%, é real e reproduz nos dois tracks — mas o efeito sobre a conversão final está
+dentro do ruído.
+
+**A `LinTS` cai para último, abaixo do baseline.** No ambiente ela superava a `LoggingPolicy`
+(12,41% contra 11,01%); no replay ela fica atrás (11,27% contra 11,48%). Os intervalos se sobrepõem,
+então "pior que o baseline" não é afirmável — mas *"melhor que o baseline"* também deixa de ser.
+
+Essa é a segunda evidência independente, por um caminho que não passa por modelo nenhum, de que a
+política contextual não entrega nestes dados. Ver a seção de resultados para o porquê.
+
 ### Rastreio no MLflow
 
 Cada política vira um **run pai** com média e intervalo entre seeds, e um **run filho por seed** —
@@ -390,7 +470,11 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
   `FixedArm`, que não têm o que calibrar. A tabela completa do sweep está publicada acima
   justamente para que o efeito seja visível em vez de embutido.
 - **A garantia de não-viés do replay não se aplica integralmente**, porque a política que gerou o log
-  não era aleatória uniforme entre os braços.
+  não era aleatória uniforme entre os braços. É o que a ponderação IPS atenua — sem eliminar, já que
+  o modelo de propensão também é uma estimativa.
+- **O replay tem pouca amostra efetiva.** Com 6 braços ele descarta de 61% a 83% do log conforme a
+  política, e a `LinTS` fica com 787 eventos efetivos de 8.238. Diferenças pequenas entre políticas
+  não são detectáveis nesse track.
 - **Ambiente calibrado não é tráfego real.** Nenhum resultado offline substitui um teste em produção.
 
 ## Estrutura do repositório
@@ -404,7 +488,8 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 │   ├── arms.py           # espaço de braços, mistura histórica, melhor braço
 │   ├── environment.py    # P(y | contexto, braço) calibrado + portões de qualidade
 │   ├── policies.py       # baseline, ε-greedy, UCB1, Thompson, LinTS
-│   └── evaluation.py     # protocolo de ambiente, runner multi-seed, métricas, MLflow
+│   ├── evaluation.py     # protocolo de ambiente, runner multi-seed, métricas, MLflow
+│   └── replay.py         # rejection sampling, IPS e comparação entre os dois tracks
 ├── api/                  # serviço FastAPI                              (Fase 6)
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento

@@ -12,6 +12,36 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
 
+### Adicionado — a fundamentação alcança o gradiente de política
+- Subseção **2.2.4** no `docs/Introducao-Fundamentacao-TC5-Grupo30.docx`. O documento tinha sido
+  escrito antes de a sétima política existir e apresentava só duas famílias — otimismo e
+  amostragem posterior. Entra a terceira, com as duas fórmulas (softmax das preferências e passo
+  de atualização), o papel da linha de base, e a redução explícita ao REINFORCE de horizonte 1.
+- A subseção responde por escrito à objeção *"por que não aprendizado por reforço completo?"*: o
+  problema não tem transição de estado nem recompensa atrasada, então não há crédito a distribuir
+  no tempo e o aparato de RL completo não teria sobre o que operar.
+- Complemento no fim da **2.7**, deixando claro que a distinção entre medir efeito e alocar
+  tráfego separa o experimento controlado de bandit *e* de RL — não bandit de RL, já que o
+  primeiro é caso particular do segundo.
+- Referência nova: **Williams (1992)**, artigo original do REINFORCE, verificada no Crossref antes
+  de ser citada. Bibliografia vai de 32 para **33 obras**. Documento de 15 para 16 páginas.
+
+### Corrigido — o auditor confundia rede caída com bibliografia errada
+- `scripts/verify_references.py` reportava timeout de serviço externo e divergência de metadado
+  como a mesma coisa: ambos viravam `FALHA` e código de saída 1. A OpenLibrary saiu do ar durante
+  esta sessão e o auditor passou a acusar "bibliografia NÃO auditada" — **alarme falso**, porque
+  nada na bibliografia tinha mudado.
+- Agora as duas categorias são distintas: `DIVERGE` condena a bibliografia e sai com **1**;
+  `INDISPON.` diz que não foi possível conferir e sai com **2**, com a mensagem explicando que
+  faltou rede, não conferência. Um auditor em que ninguém confia não audita nada.
+- Consulta por ISBN ganhou **segunda fonte** (Google Books), porque a OpenLibrary devolveu 404
+  para ISBN que respondera minutos antes. Divergência só é afirmada quando alguma fonte responde.
+- Tentativas com espera progressiva, mas curtas de propósito: `TIMEOUT` de 10 s e 2 tentativas.
+  Com os valores anteriores (30 s × 3) o auditor levava minutos para concluir que a rede caiu, e
+  ferramenta lenta nessa hora não é usada.
+- Teste por injeção de erro refeito depois da mudança: paginação errada em Williams continua sendo
+  pega como `DIVERGE`, com saída 1.
+
 ### Adicionado — sétima política: gradient bandit
 - `GradientBandit` em `src/policies.py` — gradiente de política sobre preferências por braço, com
   softmax e baseline de recompensa incremental. É o *gradient bandit* de Sutton e Barto (2018,
@@ -106,7 +136,7 @@ Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
   reivindicada para elas: o verificador só afirma o que conferiu.
 - O ISBN de Kish corresponde à reimpressão Wiley Classics de 1995 do original de 1965, e a
   referência declara isso em vez de fingir que é o volume original.
-- Ordem alfabética ABNT das 32 entradas conferida programaticamente, não a olho.
+- Ordem alfabética ABNT das 33 entradas conferida programaticamente, não a olho.
 
 ### Adicionado — introdução acadêmica e bibliografia auditável
 - **Seção 1, Introdução**, no relatório técnico, em estilo de dissertação e a pedido da banca:

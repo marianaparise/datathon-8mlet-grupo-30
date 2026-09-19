@@ -9,7 +9,7 @@ documents claim, and exits non-zero on any divergence.
 
 Entries without a registered DOI are checked by other means: PMLR, JMLR and NeurIPS
 papers by HTTP reachability of their stable proceedings page, and books by ISBN
-lookup on OpenLibrary.
+lookup on OpenLibrary with Google Books as a second source.
 
 Page ranges are asserted only where the registry actually carries them. Three
 Statistical Science entries have no page data in Crossref, so none is claimed.
@@ -17,8 +17,16 @@ Statistical Science entries have no page data in Crossref, so none is claimed.
     python scripts/verify_references.py            # audit everything
     python scripts/verify_references.py --offline  # skip network, only self-check
 
-Exit code 0 means every claim in the report's reference list is backed by an
-official record.
+Divergence and unavailability are reported apart, because they mean different
+things. A reference whose author or year contradicts the registry is a defect in
+the bibliography; a registry that times out says nothing about the reference.
+Collapsing both into one failure would make the auditor cry wolf every time an
+external service blinked, and an auditor nobody trusts audits nothing.
+
+Exit codes:
+    0  every reference checked and consistent with its official record
+    1  at least one reference DIVERGES — the bibliography has a defect
+    2  no divergence found, but some registry could not be reached; rerun later
 """
 
 from __future__ import annotations
@@ -26,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 import unicodedata
 import urllib.error
 import urllib.parse
@@ -33,7 +42,20 @@ import urllib.request
 from dataclasses import dataclass, field
 
 USER_AGENT = "tc5-datathon-reference-audit/1.0 (mailto:m.dornelles19@gmail.com)"
-TIMEOUT = 30
+# Curtos de propósito: com serviço travado, o custo é timeout x tentativas x
+# fontes, e um auditor que leva minutos para dizer "a rede caiu" não é usado.
+TIMEOUT = 10
+RETRIES = 2
+BACKOFF_SECONDS = 1
+
+
+class Unavailable(Exception):
+    """O registro não pôde ser consultado — rede, timeout ou 5xx.
+
+    Distinta de divergência: aqui não sabemos se a referência confere, e
+    tratar as duas como a mesma falha faria o auditor gritar "bibliografia
+    errada" toda vez que um serviço externo piscasse.
+    """
 
 
 @dataclass(frozen=True)
@@ -160,6 +182,10 @@ REFERENCES: tuple[Reference, ...] = (
     Reference("THOMPSON (1933)", doi="10.1093/biomet/25.3-4.285",
               surnames=("THOMPSON",), year=1933,
               venue_contains="Biometrika", pages="285-294"),
+    Reference("WILLIAMS (1992)", doi="10.1007/BF00992696",
+              surnames=("Williams",), year=1992,
+              venue_contains="Machine Learning", pages="229-256",
+              notes="artigo original do REINFORCE"),
     Reference("WILSON (1927)", doi="10.1080/01621459.1927.10502953",
               surnames=("Wilson",), year=1927,
               venue_contains="Journal of the American Statistical Association",
@@ -172,8 +198,22 @@ REFERENCES: tuple[Reference, ...] = (
 
 def _get(url: str) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-        return resp.read()
+    last: Exception | None = None
+    for attempt in range(RETRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            # 4xx é resposta do registro sobre o registro: o DOI não existe, e
+            # isso é achado, não indisponibilidade. 5xx é o servidor falhando.
+            if exc.code < 500:
+                raise
+            last = exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last = exc
+        if attempt < RETRIES - 1:
+            time.sleep(BACKOFF_SECONDS * (attempt + 1))
+    raise Unavailable(str(last))
 
 
 def _norm(text: str) -> str:
@@ -237,19 +277,42 @@ def check_url(ref: Reference) -> list[str]:
 
 
 def check_isbn(ref: Reference) -> list[str]:
+    """Confere autoria por ISBN, com a OpenLibrary e o Google Books como fontes.
+
+    Duas fontes porque a OpenLibrary é instável: ela já devolveu 404 para ISBN
+    que respondia minutos antes. Divergência só é afirmada quando uma das duas
+    responde de fato; se nenhuma responder, isso é indisponibilidade.
+    """
     assert ref.isbn
-    url = (f"https://openlibrary.org/api/books?bibkeys=ISBN:{ref.isbn}"
-           "&format=json&jscmd=data")
-    data = json.loads(_get(url))
-    record = data.get(f"ISBN:{ref.isbn}")
-    if not record:
-        return [f"ISBN {ref.isbn} não encontrado na OpenLibrary"]
-    problems: list[str] = []
-    authors = [a.get("name", "") for a in record.get("authors", [])]
-    for surname in ref.surnames:
-        if not any(_norm(surname) in _norm(a) for a in authors):
-            problems.append(f"autor {surname!r} ausente (achados: {authors})")
-    return problems
+    sources = [
+        ("OpenLibrary",
+         f"https://openlibrary.org/api/books?bibkeys=ISBN:{ref.isbn}"
+         "&format=json&jscmd=data",
+         lambda d: [a.get("name", "")
+                    for a in (d.get(f"ISBN:{ref.isbn}") or {}).get("authors", [])]),
+        ("Google Books",
+         f"https://www.googleapis.com/books/v1/volumes?q=isbn:{ref.isbn}",
+         lambda d: [a for item in d.get("items", [])[:1]
+                    for a in item.get("volumeInfo", {}).get("authors", [])]),
+    ]
+
+    unreachable = []
+    for name, url, extract in sources:
+        try:
+            authors = extract(json.loads(_get(url)))
+        except (Unavailable, urllib.error.HTTPError, ValueError) as exc:
+            unreachable.append(f"{name}: {exc}")
+            continue
+        if not authors:
+            unreachable.append(f"{name}: sem registro para o ISBN")
+            continue
+        return [
+            f"autor {surname!r} ausente em {name} (achados: {authors})"
+            for surname in ref.surnames
+            if not any(_norm(surname) in _norm(a) for a in authors)
+        ]
+
+    raise Unavailable("; ".join(unreachable))
 
 
 CHECKERS = {
@@ -270,30 +333,49 @@ def main() -> int:
         print(f"{len(REFERENCES)} referências declaradas; verificação de rede pulada.")
         return 0
 
-    failures = 0
+    diverged: list[str] = []
+    unreachable: list[str] = []
+
     for ref in sorted(REFERENCES, key=lambda r: _sort_key(r.key)):
         try:
             problems = CHECKERS[ref.registry](ref)
-        except Exception as exc:  # rede, DOI inexistente, JSON inválido
-            print(f"FALHA  {ref.key}: {exc}")
-            failures += 1
+        except Unavailable as exc:
+            unreachable.append(ref.key)
+            print(f"INDISPON.  {ref.key}: {exc}")
+            continue
+        except Exception as exc:  # DOI inexistente, JSON inválido
+            diverged.append(ref.key)
+            print(f"DIVERGE    {ref.key}: {exc}")
             continue
 
         if problems:
-            failures += 1
-            print(f"FALHA  {ref.key}")
+            diverged.append(ref.key)
+            print(f"DIVERGE    {ref.key}")
             for problem in problems:
-                print(f"       - {problem}")
+                print(f"           - {problem}")
         else:
             suffix = f"  ({ref.notes})" if ref.notes else ""
-            print(f"OK     {ref.key}{suffix}")
+            print(f"OK         {ref.key}{suffix}")
 
     total = len(REFERENCES)
-    print(f"\n{total - failures}/{total} referências conferidas contra "
-          "registro oficial.")
-    if failures:
+    checked = total - len(diverged) - len(unreachable)
+    print(f"\n{checked}/{total} conferidas contra registro oficial.")
+
+    # Divergência e indisponibilidade são coisas diferentes, e somá-las faria o
+    # auditor acusar "bibliografia errada" sempre que um serviço externo
+    # piscasse. Só a primeira condena a bibliografia.
+    if diverged:
+        print(f"{len(diverged)} DIVERGEM do registro: {', '.join(diverged)}")
         print("Bibliografia NÃO auditada com sucesso.", file=sys.stderr)
         return 1
+
+    if unreachable:
+        print(f"{len(unreachable)} não puderam ser consultadas agora: "
+              f"{', '.join(unreachable)}")
+        print("Nenhuma divergência encontrada; o que faltou foi rede, não "
+              "conferência. Reexecute quando o serviço responder.")
+        return 2
+
     print("Bibliografia auditada: todas as citações dos documentos existem "
           "e conferem.")
     return 0

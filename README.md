@@ -2,9 +2,6 @@
 
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
-> 🚧 **Em construção.** O projeto está na Fase 7 de 8 do plano de implementação.
-> **Etapas 0 a 7 do enunciado entregues.** Falta o vídeo pitch (Etapa 8).
->
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
 > decisões tomadas com o racional, decisões em aberto e referências de estudo.
 > Plano de execução em [`docs/PLANO.md`](docs/PLANO.md).
@@ -854,7 +851,7 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento
 ├── scripts/download_data.sh
-├── scripts/verify_references.py  # audita as 32 referências citadas (make refs)
+├── scripts/verify_references.py  # audita as 33 referências citadas (make refs)
 ├── tests/
 ├── docs/
 │   ├── PLANO.md          # plano de implementação em 8 fases

@@ -14,7 +14,7 @@ help:
 	@echo "test         roda a suíte de testes"
 	@echo "lint         checa estilo e erros estáticos com ruff"
 	@echo "tf-check     roda terraform fmt e validate em infra/"
-	@echo "refs         audita as 32 referências citadas contra Crossref/DataCite"
+	@echo "refs         audita as 33 referências citadas contra Crossref/DataCite"
 	@echo "demo         roteiro da demo do vídeo, passo a passo"
 	@echo "docker-up    sobe API + MLflow via docker compose"
 	@echo "clean        remove caches e artefatos gerados"

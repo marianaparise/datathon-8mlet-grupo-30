@@ -1,4 +1,4 @@
-.PHONY: help setup data train api mlflow test lint clean docker-build docker-up docker-down
+.PHONY: help setup data train api mlflow test lint refs clean docker-build docker-up docker-down
 
 VENV    := .venv
 PY      := $(VENV)/bin/python
@@ -14,6 +14,7 @@ help:
 	@echo "test         roda a suíte de testes"
 	@echo "lint         checa estilo e erros estáticos com ruff"
 	@echo "tf-check     roda terraform fmt e validate em infra/"
+	@echo "refs         audita as 32 referências citadas contra Crossref/DataCite"
 	@echo "demo         roteiro da demo do vídeo, passo a passo"
 	@echo "docker-up    sobe API + MLflow via docker compose"
 	@echo "clean        remove caches e artefatos gerados"
@@ -48,6 +49,9 @@ demo:
 
 tf-check:
 	cd infra && terraform fmt -check -recursive && terraform validate
+
+refs:
+	@python3 scripts/verify_references.py
 
 docker-build:
 	@test -f models/environment.joblib || (echo "models/environment.joblib ausente — rode 'make train' antes."; exit 1)

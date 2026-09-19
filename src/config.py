@@ -197,6 +197,13 @@ TS_BETA_PRIOR_INFORMED = 8.87
 LINTS_V = 0.05
 LINTS_LAMBDA = 1.0
 
+# Passo do gradient bandit (REINFORCE de um passo), por sweep no mesmo protocolo
+# das demais — 5 seeds, 20.000 rodadas. A grade foi de 9 valores, e não de 5: a
+# primeira passada de [0.01 … 0.5] elegeu justamente o extremo, o que não
+# estabelece ótimo, então foi estendida até 10 para confirmar a curva em U.
+# Tabela completa no README.
+GRADIENT_ALPHA = 0.5
+
 # --- Experimento ---------------------------------------------------------
 
 N_ROUNDS = 20_000

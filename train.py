@@ -46,6 +46,7 @@ from src.policies import (  # noqa: E402
     UCB1,
     EpsilonGreedy,
     FixedArm,
+    GradientBandit,
     LinTS,
     LoggingPolicy,
     Policy,
@@ -108,6 +109,10 @@ def build_policies(
                 "alpha_prior": config.TS_ALPHA_PRIOR_INFORMED,
                 "beta_prior": config.TS_BETA_PRIOR_INFORMED,
             },
+        ),
+        f"GradientBandit[a={config.GRADIENT_ALPHA:g}]": (
+            lambda rng: GradientBandit(n_arms, rng=rng),
+            {"alpha": config.GRADIENT_ALPHA, "baseline": True},
         ),
         f"LinTS[v={config.LINTS_V:g}]": (
             lambda rng: LinTS(n_arms, n_features, rng=rng),

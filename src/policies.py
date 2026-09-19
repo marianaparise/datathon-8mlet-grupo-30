@@ -255,6 +255,82 @@ class ThompsonSampling(Policy):
         self.beta[arm] += 1.0 - reward
 
 
+class GradientBandit(Policy):
+    """Policy gradient over arm preferences — REINFORCE at horizon one.
+
+    The other learners here estimate a value per arm and then decide. This one
+    never estimates a value: it carries a numeric *preference* per arm, turns
+    the preferences into a distribution by softmax, and nudges them along the
+    gradient of expected reward. It is the gradient bandit algorithm of Sutton
+    and Barto (2018, ch. 2), which is REINFORCE (Williams, 1992) with a single
+    step and no state transition — the family the rest of reinforcement
+    learning is built on, reduced to our problem.
+
+    The reward baseline is not optional decoration. Rewards here are 0 or 1 with
+    a base rate near 11%, so without subtracting a baseline every observed
+    failure would push a preference down and every success up, and the softmax
+    would chase noise. Subtracting the running mean turns the signal into
+    "better or worse than usual", which is what the gradient actually needs.
+    """
+
+    def __init__(
+        self,
+        n_arms: int,
+        *,
+        rng: np.random.Generator,
+        alpha: float = config.GRADIENT_ALPHA,
+        use_baseline: bool = True,
+    ) -> None:
+        """Store the step size and whether the reward baseline is subtracted."""
+        if alpha <= 0:
+            raise ValueError(f"alpha precisa ser > 0, recebido {alpha}.")
+        self.alpha = alpha
+        self.use_baseline = use_baseline
+        super().__init__(n_arms, rng=rng)
+
+    @property
+    def name(self) -> str:
+        """Label carrying the step size, which drives the behaviour."""
+        suffix = "" if self.use_baseline else ",sem-baseline"
+        return f"GradientBandit[a={self.alpha:g}{suffix}]"
+
+    def reset(self) -> None:
+        """Flat preferences, empty baseline. A flat softmax is the uniform policy."""
+        self.preferences = np.zeros(self.n_arms, dtype=float)
+        self.baseline = 0.0
+        self.t = 0
+
+    @property
+    def probabilities(self) -> np.ndarray:
+        """Softmax over the preferences, shifted for numerical stability.
+
+        Subtracting the maximum leaves the distribution unchanged but keeps
+        ``exp`` away from overflow once preferences drift apart.
+        """
+        shifted = self.preferences - self.preferences.max()
+        weights = np.exp(shifted)
+        return weights / weights.sum()
+
+    def select(self, context: np.ndarray) -> int:
+        """Sample an arm from the softmax. Ignores the context."""
+        return int(self.rng.choice(self.n_arms, p=self.probabilities))
+
+    def update(self, context: np.ndarray, arm: int, reward: float) -> None:
+        """Take one stochastic gradient ascent step on expected reward."""
+        self.t += 1
+        advantage = reward - self.baseline if self.use_baseline else reward
+
+        # The played arm moves by (1 - pi); every other arm moves by -pi. Both
+        # cases are the same expression once the indicator is built explicitly.
+        probabilities = self.probabilities
+        indicator = np.zeros(self.n_arms, dtype=float)
+        indicator[arm] = 1.0
+        self.preferences += self.alpha * advantage * (indicator - probabilities)
+
+        # Incremental mean, so the baseline costs no memory and no extra pass.
+        self.baseline += (reward - self.baseline) / self.t
+
+
 class LinTS(Policy):
     """Contextual Thompson Sampling with linear payoffs (Agrawal & Goyal, 2013).
 

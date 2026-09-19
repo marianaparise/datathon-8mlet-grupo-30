@@ -30,6 +30,9 @@ venv/
 .idea/
 .DS_Store
 
+# Locks do LibreOffice sobre os .docx de docs/
+.~lock.*#
+
 # Credenciais Kaggle
 kaggle.json
 

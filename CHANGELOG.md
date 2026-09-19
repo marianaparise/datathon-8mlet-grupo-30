@@ -12,6 +12,20 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
 
+### Adicionado — material da Fase 8: roteiro e deck de ensaio
+- `docs/ROTEIRO-VIDEO.md` — narração palavra por palavra, cronometrada em **4:50** dentro do
+  limite de 5 minutos, dividida em cinco blocos com um integrante por bloco. Os 90 segundos da
+  demo da API ficam com a maior fatia: é o único trecho que a banca precisa ver funcionando, e o
+  único que não dá para narrar por cima. O `DEMO.md` continua sendo a fonte das requisições e das
+  saídas esperadas; o roteiro é só a fala.
+- `docs/Apresentacao-TC5-Grupo30.pptx` — 10 slides de **ensaio**, com a narração completa nas
+  notas do apresentador. Não é o vídeo: o enunciado dispensa slides e pontua a API rodando, então
+  dois slides estão marcados nas notas como apoio que não entra na gravação.
+- Banner "🚧 Em construção" removido do topo do `README.md`. Ele anunciava "Fase 7 de 8" e era a
+  primeira coisa que a banca lia.
+- `.gitignore` passa a cobrir `.~lock.*#`, os arquivos de trava que o LibreOffice cria ao lado dos
+  `.docx` de `docs/`.
+
 ### Adicionado — a fundamentação alcança o gradiente de política
 - Subseção **2.2.4** no `docs/Introducao-Fundamentacao-TC5-Grupo30.docx`. O documento tinha sido
   escrito antes de a sétima política existir e apresentava só duas famílias — otimismo e

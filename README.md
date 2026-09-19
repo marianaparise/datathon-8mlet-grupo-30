@@ -155,7 +155,16 @@ seja justa.
 | `EpsilonGreedy` | Exploração aleatória a taxa fixa |
 | `UCB1` | Exploração guiada por incerteza |
 | `ThompsonSampling` | Exploração bayesiana, Beta-Bernoulli com **priors documentados** |
+| `GradientBandit` | **Gradiente de política** — REINFORCE de um passo, softmax sobre preferências |
 | `LinTS` | **Contextual** — a única que lê o cliente |
+
+O `GradientBandit` é a única que não estima valor de braço: ela carrega uma *preferência* numérica
+por braço, converte em distribuição por softmax e empurra as preferências na direção do gradiente
+da recompensa esperada. É o *gradient bandit* de [Sutton e Barto (2018, cap. 2)](https://mitpress.mit.edu/9780262039246/reinforcement-learning/),
+que é o REINFORCE com horizonte 1 e sem transição de estado — o elo entre este projeto e o
+aprendizado por reforço propriamente dito. Responde à pergunta "por que não RL de verdade?" com
+número em vez de argumento: **o nosso problema não tem transição de estado nem recompensa atrasada,
+então o RL aplicável aqui é exatamente este.**
 
 A escolha do baseline não é detalhe. O braço mais usado do log (`cellular | mid`, 38,8% do volume)
 é **também** o de maior conversão — modal e melhor histórico são o mesmo braço. Se o baseline fosse
@@ -240,6 +249,7 @@ Baseline = política de log.
 | Política | CVR | IC 95% | Uplift vs baseline | Exploração |
 |---|---:|---|---:|---:|
 | `FixedArm[cellular\|mid]` | **13,31%** | [13,14%; 13,47%] | **+20,85%** | 0,0% |
+| `GradientBandit[α=0.5]` | 13,03% | [12,60%; 13,45%] | +18,31% | 3,6% |
 | `ThompsonSampling[1.13, 8.87]` | **13,01%** | [12,84%; 13,18%] | **+18,16%** | 23,0% |
 | `EpsilonGreedy[ε=0.05]` | 12,88% | [12,55%; 13,20%] | +16,95% | 16,1% |
 | `ThompsonSampling[1, 1]` | 12,81% | [12,56%; 13,06%] | +16,36% | 38,0% |
@@ -253,7 +263,20 @@ Baseline = política de log.
 **Todas as políticas adaptativas superam o baseline**, com folga e sem sobreposição de intervalos.
 A melhor delas entrega **+18,2%** de conversão sobre a política que a operação de fato executava.
 
-Três leituras que os números impõem:
+Quatro leituras que os números impõem:
+
+**O gradiente de política empata com a Thompson, e a média esconde o que importa.** O
+`GradientBandit` marca 13,03% contra 13,01% — dois centésimos de ponto, com intervalos que se
+sobrepõem quase inteiramente. **Não é vitória, é empate.** O que o separa da Thompson é a
+*estabilidade*: o intervalo dele tem 0,85 p.p. de largura contra 0,34 p.p. da Thompson, **duas
+vezes e meia mais disperso entre seeds**, e o regret varia de 102 a 244 contra os 179–219 da
+Thompson. A causa está na coluna de exploração: **3,6%**. Ele praticamente para de explorar, e é
+assim que alcança a média alta — comprometendo-se cedo com um braço, o que funciona muito bem
+quando acerta e cobra caro quando a semente o levou ao braço errado. Alta variância é a assinatura
+do comprometimento precoce. Em termos operacionais: ele chega perto da `FixedArm` por imitá-la, não
+por aprender melhor, e paga em risco o que ganha em média. A figura de puxadas por braço mostra
+isso direto: **~78% do tráfego em `cellular\|mid`** contra ~68% da Thompson, com os braços de
+telefone fixo praticamente abandonados.
 
 **O prior informado vence o uniforme.** `Beta(1.13, 8.87)` codifica a taxa-base de 11,27% com a
 força de 10 observações, e rende 13,01% contra 12,81% do `Beta(1, 1)`. O motivo aparece na coluna
@@ -297,6 +320,29 @@ de exploração. O bônus `√(2·ln t / n)` foi desenhado para recompensa em to
 aqui as médias vivem entre 5% e 15% — o bônus domina o sinal e a política nunca se decide. Com
 `c = 0.05` acontece o oposto: explora de menos, trava cedo e fica em 11,00%.
 
+O `GradientBandit` levou **grade de nove valores, não de cinco**, e a razão é metodológica: a
+primeira passada, `[0,01 … 0,5]`, elegeu justamente o extremo superior. Vencedor na borda não
+estabelece ótimo — pode só significar que a grade acabou antes da curva. Estendida até 10, o ótimo
+aparece no interior:
+
+| `GradientBandit` `α` | CVR | Exploração | | `α` | CVR | Exploração |
+|---:|---:|---:|---|---:|---:|---:|
+| 0,01 | 11,29% | 74,3% | | 1,00 | 13,00% | 43,8% |
+| 0,05 | 12,54% | 53,8% | | 2,00 | 12,51% | 45,6% |
+| 0,10 | 13,00% | 30,9% | | 5,00 | 11,47% | 59,5% |
+| 0,25 | 13,00% | 24,8% | | 10,0 | 10,56% | 59,4% |
+| **0,50** | **13,33%** | 21,0% | | | | |
+
+A coluna de exploração revela por que passo grande não compensa: de `α = 0,5` para `α = 1,0` ela
+**sobe** de 21% para 44%. Passo grande não faz a política decidir mais rápido — faz as preferências
+oscilarem, porque cada atualização joga o softmax longe demais e a rodada seguinte o joga de volta.
+É o comportamento clássico de taxa de aprendizado acima do ponto de estabilidade.
+
+O **baseline de recompensa foi medido, não presumido**: com `α = 0,5`, 13,33% com baseline contra
+12,97% sem. Subtrair a média corrente importa porque a recompensa aqui é 0 ou 1 com taxa-base de
+11% — sem baseline, cada fracasso observado empurra uma preferência para baixo e o softmax persegue
+ruído.
+
 ![Onde cada política gastou o tráfego](reports/figures/puxadas_por_braco.png)
 
 ## O replay: a contraprova sem modelo no meio
@@ -315,6 +361,7 @@ motivos diferentes; concordância entre eles é evidência de verdade.
 |---|---:|---:|---|---:|---:|---:|
 | `FixedArm[cellular\|mid]` | 15,47% | **14,00%** | [14,00%; 14,00%] | 38,8% | 3.193 | 3.000 |
 | `EpsilonGreedy` | 15,25% | **13,50%** | [13,31%; 13,70%] | 33,3% | 2.741 | 2.127 |
+| `GradientBandit[α=0.5]` | 14,67% | 13,07% | [12,69%; 13,46%] | 28,8% | 2.369 | 1.747 |
 | `ThompsonSampling[1, 1]` | 13,99% | 12,55% | [11,85%; 13,25%] | 20,3% | 1.671 | 984 |
 | `ThompsonSampling[1.13, 8.87]` | 14,43% | 12,37% | [11,95%; 12,80%] | 24,0% | 1.978 | 1.242 |
 | `UCB1` | 13,88% | 12,07% | [11,55%; 12,58%] | 17,3% | 1.424 | 903 |
@@ -335,16 +382,21 @@ intervalos serem os mais largos da tabela.
 | Política | Ambiente | Replay (IPS) | Rank A | Rank C | Δ |
 |---|---:|---:|:-:|:-:|:-:|
 | `FixedArm[cellular\|mid]` | 13,31% | 14,00% | 1 | 1 | 0 |
-| `ThompsonSampling[1.13, 8.87]` | 13,01% | 12,37% | 2 | 4 | **+2** |
-| `EpsilonGreedy` | 12,88% | 13,50% | 3 | 2 | −1 |
-| `ThompsonSampling[1, 1]` | 12,81% | 12,55% | 4 | 3 | −1 |
-| `UCB1` | 12,70% | 12,07% | 5 | 5 | 0 |
-| `LinTS` | 12,41% | 11,27% | 6 | **7** | +1 |
-| `LoggingPolicy` | 11,01% | 11,48% | 7 | 6 | −1 |
+| `GradientBandit[α=0.5]` | 13,03% | 13,07% | 2 | 3 | +1 |
+| `ThompsonSampling[1.13, 8.87]` | 13,01% | 12,37% | 3 | 5 | **+2** |
+| `EpsilonGreedy` | 12,88% | 13,50% | 4 | 2 | −2 |
+| `ThompsonSampling[1, 1]` | 12,81% | 12,55% | 5 | 4 | −1 |
+| `UCB1` | 12,70% | 12,07% | 6 | 6 | 0 |
+| `LinTS` | 12,41% | 11,27% | 7 | **8** | +1 |
+| `LoggingPolicy` | 11,01% | 11,48% | 8 | 7 | −1 |
 
 **Spearman = 0,857.** Os dois métodos ordenam as políticas quase igual, apesar de um simular 20.000
 decisões contra um modelo e o outro peneirar um log real de 8.238 linhas. O ambiente calibrado não
 está inventando um ranking.
+
+O coeficiente deu **exatamente o mesmo valor** de quando eram sete políticas. É coincidência
+aritmética, não estabilidade demonstrada — com n = 8 e Σd² = 12 o Spearman cai em 0,857 do mesmo
+jeito que caía com n = 7 e Σd² = 8. Vale dizer porque o número repetido convida à leitura errada.
 
 ### A triangulação que fecha o argumento
 
@@ -382,7 +434,7 @@ política contextual não entrega nestes dados. Ver a seção de resultados para
 ### Rastreio no MLflow
 
 Cada política vira um **run pai** com média e intervalo entre seeds, e um **run filho por seed** —
-77 runs no total. A média fica citável e cada seed permanece auditável.
+88 runs no total. A média fica citável e cada seed permanece auditável.
 
 ```bash
 make mlflow   # http://localhost:5000
@@ -802,13 +854,15 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 ├── notebooks/01_eda.ipynb
 ├── reports/figures/      # figuras do notebook e do experimento
 ├── scripts/download_data.sh
+├── scripts/verify_references.py  # audita as 32 referências citadas (make refs)
 ├── tests/
 ├── docs/
 │   ├── PLANO.md          # plano de implementação em 8 fases
 │   ├── BRIEFING.md       # contexto e decisões, para quem entra no projeto
 │   ├── DEMO.md           # roteiro da demonstração do vídeo
-│   ├── Relatorio-Tecnico-TC5-Grupo30.docx   # relatório de 10 páginas
-│   └── Guia-de-Estudo-TC5-Grupo30.docx      # material interno do grupo
+│   ├── Relatorio-Tecnico-TC5-Grupo30.docx          # relatório, 15 páginas
+│   ├── Introducao-Fundamentacao-TC5-Grupo30.docx   # introdução ampliada, 15 páginas
+│   └── Guia-de-Estudo-TC5-Grupo30.docx             # material interno do grupo
 ├── CLAUDE.md             # regras e decisões do projeto
 └── CHANGELOG.md          # histórico de modificações
 ```

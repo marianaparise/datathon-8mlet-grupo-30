@@ -12,10 +12,136 @@ avaliada pela banca mora no `README.md` (ver `CLAUDE.md`, seção 3).
 
 Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
 
+### Adicionado — sétima política: gradient bandit
+- `GradientBandit` em `src/policies.py` — gradiente de política sobre preferências por braço, com
+  softmax e baseline de recompensa incremental. É o *gradient bandit* de Sutton e Barto (2018,
+  cap. 2), que é o **REINFORCE com horizonte 1 e sem transição de estado**. Entra porque responde
+  com número à pergunta "por que não RL de verdade?": o nosso problema não tem recompensa atrasada
+  nem transição de estado, então o RL aplicável aqui é exatamente este.
+- Softmax desloca pelo máximo antes de exponenciar; sem isso o `exp` transborda quando as
+  preferências se afastam.
+- `config.GRADIENT_ALPHA = 0.5`, por sweep no mesmo protocolo das demais — 5 seeds, 20.000 rodadas.
+
+### Notas — o resultado, e por que não é vitória
+- No track A ela marca **13,03%** contra 13,01% da Thompson informada. **É empate, não vitória:**
+  dois centésimos de ponto com intervalos que se sobrepõem quase inteiramente.
+- O que os separa é dispersão, não média. O IC dela tem **0,85 p.p. de largura contra 0,34 p.p.**
+  da Thompson — duas vezes e meia mais disperso entre seeds — e o regret varia de 102 a 244 contra
+  179–219. Com **3,6% de exploração**, ela chega perto da `FixedArm` por imitá-la, comprometendo-se
+  cedo com um braço. Alta variância é a assinatura do comprometimento precoce: excelente quando
+  acerta, caro quando a semente a levou ao braço errado.
+- **A grade do sweep teve 9 valores, não 5.** A primeira passada `[0,01 … 0,5]` elegeu o extremo
+  superior, e vencedor na borda não estabelece ótimo — pode só significar que a grade acabou antes
+  da curva. Estendida até 10, o ótimo aparece no interior.
+- Achado da curva: de `α = 0,5` para `α = 1,0` a exploração **sobe** de 21% para 44%. Passo grande
+  não acelera a decisão, faz o softmax oscilar.
+- Baseline **medido, não presumido**: 13,33% com, 12,97% sem, no mesmo α.
+- No track C ela fica em 3.º (13,07% IPS) contra 2.º no ambiente. Aceitação de 28,8%, acima da UCB1
+  (17,3%) e da Thompson (24,0%) — mas abaixo da ε-greedy (33,3%), então "softmax aceita mais que
+  política determinística" só vale contra as concentradas em braço incerto, não em geral.
+- Spearman entre os tracks segue **0,857**. É coincidência aritmética e está dito como tal no
+  README: com n = 8 e Σd² = 12 dá o mesmo 6/7 que dava com n = 7 e Σd² = 8.
+
+### Corrigido — falha no desenho dos próprios testes
+- `tests/test_policies.py` parametrizava os testes de conformidade e de determinismo com
+  `range(6)` **literal**. Política nova entraria em `make_all` e **escaparia em silêncio** desses
+  dois testes, com a suíte verde. Agora a parametrização é derivada de `len(make_all(...))`.
+- Teste novo `test_every_policy_class_is_covered_by_make_all`, que compara as subclasses concretas
+  de `Policy` com o que está em `make_all` e falha nomeando a que faltar. Verificado por remoção
+  deliberada da política: acusa `{'GradientBandit'}`.
+- Suíte passa de 189 para **198 testes**.
+- `make train` agora gera **88 runs** no MLflow (8 políticas × 11), contra 77. Atualizado no
+  README, no `docs/DEMO.md` e no `docs/BRIEFING.md`.
+
+### Alterado — os dois .docx acompanham a política nova
+- **Relatório:** linha nova nas tabelas dos tracks A e C, com as posições abaixo dela deslocadas;
+  "Sete políticas" viram **"Oito políticas"** no texto da seção de resultados; "Três leituras" viram
+  **"Quatro leituras"**, com a leitura nova declarando o empate. Segue em **15 páginas**.
+- **Guia:** "As seis políticas" viram **"As sete políticas"**, com subseção nova explicando o
+  gradiente de política, o papel do baseline e a armadilha de leitura do 2.º lugar. Pergunta nova
+  na seção 9: *"Por que não usaram reinforcement learning de verdade?"*. Vai de 9 para 10 páginas.
+- As contagens divergem de propósito e as duas estão certas: o guia conta **classes** de política
+  (7) e o relatório conta **configurações** (8), porque a Thompson entra com dois priors.
+- Cada linha de tabela foi clonada de uma linha existente para herdar a formatação, e o
+  **sombreado alternado reaplicado** depois da inserção — inserir no meio desloca a paridade das
+  faixas e deixaria a tabela listrada errado.
+
+### Corrigido — dois defeitos que só a renderização revelou
+- **Página em branco antes das Referências.** O parágrafo vazio que só carregava
+  `<w:br type="page"/>` produzia página vazia quando o corpo terminava justo no fim de uma página:
+  o parágrafo fluía para a página seguinte e a quebra dentro dele empurrava o conteúdo mais uma.
+  Trocado por `pageBreakBefore` no próprio título. Sem isso o relatório ficaria em 16 páginas,
+  uma delas branca.
+- **Figura embutida defasada.** O PNG dentro do `.docx` era o de antes do novo treino, com sete
+  políticas na legenda. Substituído pelo regerado; as dimensões conferidas antes da troca
+  (990×550 nas duas), porque tamanho diferente sairia esticado.
+
+### Nota — o que a renderização pegou e a validação não
+- A validação XSD passou nas duas rodadas em que o documento estava **errado**: com "Sete
+  políticas" desatualizado e com a página em branco. Schema válido não é documento correto, e os
+  dois defeitos só apareceram ao olhar a página renderizada.
+
+### Adicionado — documento autônomo de introdução
+- `docs/Introducao-Fundamentacao-TC5-Grupo30.docx` — **15 páginas**, peça complementar ao relatório
+  técnico, em estilo de capítulos 1 e 2 de dissertação. Seção 1: contextualização, instrumento
+  convencional e seu custo, problema de pesquisa, hipóteses, objetivos, justificativa, delimitação
+  e organização. Seção 2: fundamentação teórica — formalização do bandit, arrependimento e limite
+  de Lai-Robbins, índices de Gittins, as três famílias de política, extensão contextual e o preço
+  da dimensionalidade, os cinco estimadores de avaliação fora da política, calibração,
+  positividade e a distinção entre o que bandits substituem e o que não substituem. Seção 3:
+  trabalhos relacionados e a lacuna ocupada. Seção 4: tabela ligando cada fundamento à decisão de
+  projeto correspondente.
+- Bibliografia ampliada de 16 para **32 obras**, todas verificadas. As 16 novas incluem Gittins
+  (1979), Horvitz e Thompson (1952), Rosenbaum e Rubin (1983), Brown, Cai e DasGupta (2001),
+  Villar, Bowden e Wason (2015) e o bake-off de Bietti, Agarwal e Langford (2021).
+- `scripts/verify_references.py` estendido para as 32 entradas; `make refs` cobre os dois
+  documentos.
+
+### Notas — o que a verificação pegou nesta rodada
+- **Gittins (1979) é p. 148-164**, não 148-177. O número errado é o que eu teria escrito de
+  memória; o registro do Crossref corrigiu.
+- **O DOI do Auer (2002) no JMLR é um DOI deletado** — o Crossref responde
+  "CrossRef Listing of Deleted DOIs". A referência foi descartada em vez de citada com DOI morto.
+- Três entradas da *Statistical Science* não têm paginação no Crossref. Nenhuma paginação é
+  reivindicada para elas: o verificador só afirma o que conferiu.
+- O ISBN de Kish corresponde à reimpressão Wiley Classics de 1995 do original de 1965, e a
+  referência declara isso em vez de fingir que é o volume original.
+- Ordem alfabética ABNT das 32 entradas conferida programaticamente, não a olho.
+
+### Adicionado — introdução acadêmica e bibliografia auditável
+- **Seção 1, Introdução**, no relatório técnico, em estilo de dissertação e a pedido da banca:
+  contextualização, referencial teórico de alocação sequencial sob incerteza, o problema
+  metodológico da avaliação fora da política, pergunta de pesquisa, três hipóteses, objetivo geral
+  e cinco específicos, contribuições, delimitação e organização do documento.
+- **Seção Referências** conforme ABNT NBR 6023:2018, com citações no texto em NBR 10520:2023
+  (sistema autor-data). Dezesseis obras, de Thompson (1933) a Lattimore e Szepesvári (2020).
+- `scripts/verify_references.py` e alvo `make refs` — **audita cada referência** contra as APIs do
+  Crossref e do DataCite, conferindo autores, ano, veículo e paginação, mais OpenLibrary por ISBN
+  para o livro sem DOI e checagem de alcançabilidade para os dois anais sem DOI registrado.
+  Falha com código de saída 1 em qualquer divergência.
+
+### Notas — a bibliografia
+- **Nenhuma citação foi escrita de memória.** As 16 entradas passaram por verificação em fonte
+  primária antes de entrarem no documento, e o script permite reexecutar a auditoria a qualquer
+  momento — 16/16 conferidas.
+- O verificador foi testado por injeção de erro: alterando a paginação de Moro, Cortez e Rita e o
+  ano de Wilson, ele acusa as duas divergências e sai com código 1. Um auditor que só sabe dizer
+  "OK" não audita nada.
+- Correção de citação preservada da rodada anterior: o artigo de replay é **WSDM 2011**, não 2010.
+  O erro tinha origem em confundi-lo com o LinUCB (WWW 2010), dos mesmos autores.
+- `duration` continua ausente de tudo, inclusive da introdução, onde a exclusão é declarada.
+
+### Alterado
+- Seções do relatório renumeradas de 1–10 para **2–11** com a entrada da Introdução. As duas
+  referências cruzadas no corpo ("teto medido na seção 3", "tudo na seção 4") foram ajustadas
+  junto — renumerar título sem ajustar remissão produz documento internamente inconsistente.
+- Relatório passa de **10 para 15 páginas**. O limite de 10 era restrição nossa, não do enunciado;
+  a introdução em estilo dissertação foi pedida depois e não cabe nele.
+
 ### Adicionado — documentos
 - Capa dos dois documentos com os **quatro integrantes** do grupo. Até aqui eu vinha supondo que o
   time era uma dupla, por inferir tamanho de grupo a partir de quem aparecia na conversa.
-- `docs/Relatorio-Tecnico-TC5-Grupo30.docx` — relatório técnico em **10 páginas exatas**:
+- `docs/Relatorio-Tecnico-TC5-Grupo30.docx` — relatório técnico, originalmente em **10 páginas**:
   problema de negócio, formulação dos braços, método de avaliação em duas camadas, resultados,
   Golden Set, engenharia, limitações e governança. Paginação conferida por renderização.
 - `docs/Guia-de-Estudo-TC5-Grupo30.docx` — 9 páginas, material interno: o que é uma política,

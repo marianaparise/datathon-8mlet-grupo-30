@@ -68,7 +68,7 @@ Brier **0,0860**, desvio máximo por braço de **0,96 p.p.**, AUC 0,7413 contra 
 e diagnóstico de sobreposição.
 
 ✅ **Fase 3** — `src/policies.py`, `src/evaluation.py`, `train.py`. Seis políticas, 20.000 rodadas
-× 10 seeds, 77 runs no MLflow.
+× 10 seeds, 88 runs no MLflow.
 
 ✅ **Fase 4** — `src/replay.py`. Rejection sampling com IPS sobre o log real. **Spearman = 0,857**
 entre os rankings dos dois tracks: o ambiente calibrado não está inventando a ordem.

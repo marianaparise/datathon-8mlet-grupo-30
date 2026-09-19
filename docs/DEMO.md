@@ -45,7 +45,7 @@ make mlflow   # terminal 2
 | 0:00–1:00 | O problema de negócio | Slide ou README |
 | 1:00–2:00 | Base, braços e por que não sintetizamos recompensa | README |
 | 2:00–3:00 | Resultados: adaptativo vs baseline, curvas de regret | README + figuras |
-| 3:00–3:30 | MLflow com os 77 runs | Navegador |
+| 3:00–3:30 | MLflow com os 88 runs | Navegador |
 | 3:30–5:00 | **A API rodando** | Swagger + terminal |
 
 O trecho que importa é o último. Os quatro primeiros você narra; o quinto tem que funcionar ao vivo.

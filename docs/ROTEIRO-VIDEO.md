@@ -132,7 +132,7 @@ curl -s -X POST http://localhost:8000/recommend \
 > A API devolve o braço recomendado e **o ranking inteiro dos seis**. Estudante converte muito acima
 > da taxa-base de 11%, celular domina, e o pior braço vale um quarto do melhor.
 
-### 4.3 — Cliente B: o ranking vira (3:50–4:20)
+### 4.3 — Cliente B: o melhor braço médio cai (3:50–4:20)
 
 > Agora o mesmo endpoint, cliente diferente: técnico de 49 anos que **já levou seis ligações**.
 
@@ -144,9 +144,16 @@ curl -s -X POST http://localhost:8000/recommend \
        "previous":0,"poutcome":"nonexistent"}'
 ```
 
-> O ranking virou. **`telephone|early` assume a liderança**, e `cellular|mid` — que é o melhor braço
-> na média da base inteira — cai para quarto lugar. Para quem já cansou de seis ligações no celular,
-> o canal alternativo deixa de ser inferior. **Uma regra fixa mandaria celular para os dois.**
+> O ranking virou. Os dois primeiros **empatam** — 0,27 ponto entre eles — e a resposta traz
+> `is_tie: true` justamente para não fingir preferência. O que mudou de verdade é que `cellular|mid`,
+> o melhor braço na média da base inteira, **caiu para quarto**, 1,74 ponto abaixo do topo. Para quem
+> já cansou de seis ligações no celular, o canal alternativo deixa de ser inferior. **Uma regra fixa
+> mandaria celular para os dois.**
+
+<!-- Não narre "telephone|early assume a liderança": a margem é 0,27 p.p., abaixo do
+     TIE_THRESHOLD de 0,5 p.p., e o is_tie: true aparece na tela. A afirmação forte e
+     defensável é a queda do cellular|mid, que tem 1,74 p.p. de folga. -->
+
 
 ### 4.4 — O contrato recusa lixo (4:20–4:35)
 

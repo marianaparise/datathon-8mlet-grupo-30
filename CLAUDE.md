@@ -50,8 +50,12 @@ Vêm do enunciado. Violar qualquer uma custa nota.
   arquivos soltos de governança". `CLAUDE.md`, `CHANGELOG.md` e `docs/PLANO.md` são ferramentas de
   desenvolvimento, não entregáveis — tudo que a banca precisa ler mora no README.
 - Sem dados reais de cliente, identificadores, patrimônio, renda, gênero ou raça.
-- O README precisa cobrir: link da base, **base legal, finalidade, minimização, retenção** e
-  **humano no loop** para decisões sensíveis.
+- O README precisa cobrir o link da base e **documentar base legal, finalidade, minimização e
+  retenção** — os quatro itens que o PDF manda documentar.
+- **Humano no loop é exigência de projeto, não de documentação.** O PDF diz "*mantenha* decisões
+  sensíveis com humano no loop", não "documente". Cumprimos as duas leituras: o sistema recomenda
+  sem agir, e o README descreve isso — porque descrever é o que torna a exigência verificável.
+  Não afirmar à banca que o enunciado manda *documentar* humano no loop; o verbo dele é *manter*.
 - Preservar a referência ao Kaggle (fonte, versão, licença, colunas, target, limitações).
 
 ---

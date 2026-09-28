@@ -698,8 +698,12 @@ Três decisões que valem explicação:
 
 ## Governança
 
-O enunciado exige tratar base legal, finalidade, minimização, retenção e humano no loop. As cinco,
-na ordem.
+O enunciado faz duas exigências distintas, e vale não confundi-las: *"**mantenha** decisões
+sensíveis com humano no loop **e documente** base legal, finalidade, minimização e retenção"*.
+
+Ou seja — quatro itens a **documentar**, e o humano no loop como requisito **de projeto**. Abaixo
+estão os quatro documentados, e depois como o quinto é cumprido, já que dizer que foi cumprido é a
+única forma de a exigência ser verificável.
 
 **Base legal.** Os dados usados aqui são públicos, de pesquisa acadêmica, sob **CC BY 4.0** — não há
 titular a quem responder no escopo deste trabalho. Num sistema real com clientes reais, a base legal

@@ -26,6 +26,48 @@ Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
 - `.gitignore` passa a cobrir `.~lock.*#`, os arquivos de trava que o LibreOffice cria ao lado dos
   `.docx` de `docs/`.
 
+### Corrigido — paráfrase minha do enunciado, apresentada como se fosse o texto dele
+- `README.md`, `CLAUDE.md` e `docs/BRIEFING.md` diziam que **"o README precisa cobrir base legal,
+  finalidade, minimização, retenção e humano no loop"**, como se os cinco fossem exigência de
+  documentação. Não são. O PDF diz: *"**mantenha** decisões sensíveis com humano no loop **e
+  documente** base legal, finalidade, minimização e retenção"* — quatro itens a documentar, e o
+  humano no loop como requisito **de projeto**, com verbo diferente.
+- A frase era síntese minha e estava circulando como citação do enunciado. Os três arquivos agora
+  separam as duas exigências e o README cita o trecho textualmente.
+- **Cumprimos as duas leituras de todo modo**, então nada de substantivo muda: o sistema recomenda
+  sem agir, e o README descreve como — porque descrever é o que torna a exigência verificável. O
+  risco era de fala, não de entrega: afirmar à banca que o enunciado manda *documentar* humano no
+  loop é contestável com o PDF aberto.
+- A tabela de governança do relatório usa "Dimensão | Tratamento", que não afirma nada sobre o que
+  o enunciado exige — não precisou de ajuste. Guia e fundamentação não tocam no tema.
+
+### Adicionado — pytest.ini com um filtro de aviso, e o risco que ele não resolve
+- `pytest.ini` silenciando **um único** aviso: a depreciação que o joblib dispara ao desserializar
+  o pipeline scikit-learn (`array.shape = ...`, depreciado no NumPy 2.5). Eram **1.301 linhas por
+  execução**, todas de `tests/test_api.py`, e esse volume faz um aviso de verdade passar batido —
+  que é justamente a função do aviso.
+- O filtro casa a mensagem exata. Verificado por teste descartável: um `DeprecationWarning` de
+  outra origem continua aparecendo, só o do joblib fica silenciado. Filtro que esconde tudo é pior
+  que filtro nenhum.
+- **Não é do nosso código e o silêncio não corrige nada.** O joblib 1.6.0 ainda não traz o ajuste
+  — conferido no `CHANGES.rst` do projeto, não presumido. Quando trouxer, subir o pin e apagar a
+  entrada.
+- Risco registrado no próprio arquivo: se uma versão do NumPy **remover** o comportamento em vez
+  de depreciá-lo, `joblib.load` falha e **a API não sobe**, porque ela carrega o ambiente no
+  startup. O que segura isso é o pin `numpy==2.5.1`, não o filtro.
+
+### Alterado — a narração do cliente B não afirma mais liderança
+- `docs/DEMO.md` e `docs/ROTEIRO-VIDEO.md` rotulavam o passo do técnico de 49 anos como
+  *"`telephone|early` assume a liderança"*. A margem entre os dois primeiros é de **0,27 p.p.**,
+  abaixo do `TIE_THRESHOLD` de 0,5 p.p., e a resposta traz `is_tie: true` **na tela**. Narrar
+  liderança contradiz o flag que construímos para o sistema não fingir convicção.
+- A afirmação forte e defensável é outra: **`cellular|mid` caiu para quarto**, 1,74 p.p. abaixo do
+  topo — bem acima do limiar. A narração passa a reconhecer o empate e apontar essa queda, o que
+  deixa o trecho mais forte, não mais fraco: mostra o achado e mostra que o sistema sabe quando
+  não tem preferência.
+- Título do bloco 4.3 do roteiro vira "o melhor braço médio cai", que é o que de fato acontece.
+  Comprimento da fala preservado para não estourar a cronometragem de 4:50.
+
 ### Adicionado — a fundamentação alcança o gradiente de política
 - Subseção **2.2.4** no `docs/Introducao-Fundamentacao-TC5-Grupo30.docx`. O documento tinha sido
   escrito antes de a sétima política existir e apresentava só duas famílias — otimismo e

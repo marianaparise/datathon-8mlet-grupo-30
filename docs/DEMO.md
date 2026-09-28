@@ -120,16 +120,26 @@ curl -s -X POST http://localhost:8000/recommend \
 
 | Braço | Probabilidade | |
 |---|---:|---|
-| **`telephone\|early`** | **7,91%** | ⬅ telefone fixo assume a liderança |
-| `cellular\|late` | 7,64% | |
+| **`telephone\|early`** | **7,91%** | ⬅ topo, mas **empatado** com o seguinte |
+| `cellular\|late` | 7,64% | ⬅ só 0,27 p.p. abaixo — `is_tie: true` |
 | `cellular\|early` | 6,55% | |
-| `cellular\|mid` | 6,17% | ⬅ o melhor braço *na média* caiu para quarto |
+| `cellular\|mid` | 6,17% | ⬅ **o achado**: o melhor braço *na média* caiu para quarto |
 | `telephone\|late` | 5,23% | |
 | `telephone\|mid` | 4,05% | |
 
-**Fale:** para quem já levou seis ligações no celular, o telefone fixo deixa de ser inferior.
-`cellular|mid`, que é o melhor braço na média da base, cai para quarto lugar. **É isso que uma
-regra fixa nunca faria** — ela mandaria celular para os dois clientes.
+> ⚠️ **Não narre "o telefone fixo assume a liderança".** A margem entre os dois primeiros é de
+> **0,27 p.p.**, abaixo do `TIE_THRESHOLD` de 0,5 p.p., e a resposta traz `is_tie: true` na tela.
+> Afirmar liderança contradiz o próprio flag que construímos para não fingir convicção — e a banca
+> pode apontar isso.
+
+**Fale:** para quem já levou seis ligações no celular, o telefone fixo deixa de ser inferior — os
+dois primeiros **empatam**, e o `is_tie` diz isso. O que mudou de verdade é que `cellular|mid`, o
+melhor braço na média da base, **caiu para quarto lugar**, 1,74 p.p. abaixo do topo. Essa diferença
+é sólida, bem acima do limiar de empate. **É isso que uma regra fixa nunca faria** — ela mandaria
+celular para os dois clientes.
+
+Essa versão é mais forte que a anterior, não mais fraca: você mostra o achado **e** demonstra que o
+sistema sabe quando não tem preferência.
 
 ---
 

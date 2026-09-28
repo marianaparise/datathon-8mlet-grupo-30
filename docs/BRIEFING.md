@@ -48,7 +48,10 @@ modelo superando baseline, MLflow, demo funcionando).
 - `duration` é proibida — vazamento temporal, citada nominalmente
 - Sem dados reais de cliente, identificadores, patrimônio, renda, gênero ou raça
 - Toda documentação **consolidada no README**, sem arquivos soltos de governança
-- README precisa cobrir base legal, finalidade, minimização, retenção e humano no loop
+- README precisa **documentar** base legal, finalidade, minimização e retenção — são esses quatro
+  que o PDF manda documentar
+- **Humano no loop é requisito de projeto, não de documentação.** O verbo do PDF é *mantenha*, não
+  *documente*. O README descreve como cumprimos, porque é o que torna a exigência verificável
 
 ---
 

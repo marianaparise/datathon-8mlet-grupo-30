@@ -63,11 +63,11 @@ tc5/
 
 **Cobre a Etapa 0.**
 
-- [ ] `git init`, primeiro commit, repositório público `datathon-7mlet-grupo-XX`
-- [ ] `.gitignore` — `data/raw/`, `data/processed/`, `mlruns/`, `models/*.joblib`, `.venv/`, `__pycache__/`
-- [ ] `requirements.txt` pinado e validado com `pip install` real
-- [ ] `Makefile` — `setup`, `data`, `train`, `api`, `mlflow`, `test`
-- [ ] esqueleto de `README.md` com as seções que serão preenchidas ao longo do caminho
+- [x] `git init`, primeiro commit, repositório público `datathon-8mlet-grupo-30`
+- [x] `.gitignore` — `data/raw/`, `data/processed/`, `mlruns/`, `models/*.joblib`, `.venv/`, `__pycache__/`
+- [x] `requirements.txt` pinado e validado com `pip install` real
+- [x] `Makefile` — `setup`, `data`, `train`, `api`, `mlflow`, `test`
+- [x] esqueleto de `README.md` com as seções que serão preenchidas ao longo do caminho
 
 **Saída:** repositório instalável do zero em máquina limpa.
 

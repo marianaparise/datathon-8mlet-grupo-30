@@ -1,7 +1,8 @@
 # Briefing — TC5 / Datathon POSTECH MLET
 
-> Documento de contexto para quem está entrando no projeto agora. Explica o desafio, o que já foi
-> decidido e **por quê**, o que ainda precisa ser decidido, e o que vale estudar.
+> Documento de contexto para quem está entrando no projeto agora. Explica o desafio, o que foi
+> decidido e **por quê**, e o que vale estudar. As nove decisões estão fechadas; falta gravar o
+> vídeo.
 >
 > Não é entregável — a documentação que a banca lê fica no [`README.md`](../README.md).
 
@@ -10,7 +11,7 @@
 2. [Onde estamos](#2-onde-estamos)
 3. [O problema central do projeto](#3-o-problema-central-do-projeto)
 4. [Decisões fechadas](#4-decisões-fechadas)
-5. [Decisões em aberto](#5-decisões-em-aberto--precisamos-bater-martelo)
+5. [Decisões que precisaram de martelo](#5-decisões-que-precisaram-de-martelo--todas-batidas)
 6. [Riscos conhecidos](#6-riscos-conhecidos)
 7. [Base teórica](#7-base-teórica--o-que-vale-estudar)
 8. [Como rodar o que existe](#8-como-rodar-o-que-existe)
@@ -218,11 +219,10 @@ da Etapa 3.
 
 ---
 
-## 5. Decisões em aberto — precisamos bater martelo
+## 5. Decisões que precisaram de martelo — todas batidas
 
-**7 das 9 fechadas.** Restam a **#7** (divisão de trabalho e vídeo) e a **#8** (o que fazer com a
-política contextual). As resolvidas ficam registradas com o racional — quem chegar depois precisa
-saber por que, não só o quê.
+**As 9 estão fechadas.** Ficam registradas com o racional — quem chegar depois precisa saber por
+que, não só o quê. A única coisa em aberto no projeto é **gravar o vídeo** (Etapa 8).
 
 ### ~~9. Trocar de dataset?~~ — ✅ **RESOLVIDA: não**
 Levantado depois que a Fase 4 revelou o tamanho do confounding temporal. As quatro bases sugeridas
@@ -309,13 +309,26 @@ braço porque o ambiente da Fase 2 estima `P(y | contexto, braço)` e precisa do
 povoados nos dois folds — o mais magro fica com 596 eventos e 28 conversões no teste. O temporal
 vira análise de sensibilidade na Fase 3.
 
-### 7. Divisão de trabalho e vídeo
-Quem toca o quê nas Fases 4–7, quem grava o vídeo da Etapa 8, e qual a data-limite interna.
+### ~~7. Divisão de trabalho e vídeo~~ — ✅ **RESOLVIDA**
 
-Até aqui: Doglas fez a Fase 1, Mariana as Fases 2 e 3. **A Fase 2 estava declarada como próximo
-passo do Doglas no CHANGELOG e acabou sendo feita pela Mariana** — vale alinhar para não repetir.
+**Implementação:** Doglas fez a Fase 1 (EDA e pipeline de dados); Mariana as Fases 0, 2, 3, 4, 5, 6
+e 7. Vale o registro de que a Fase 2 estava declarada como próximo passo do Doglas no CHANGELOG e
+acabou sendo feita pela Mariana — desalinhamento que não se repetiu depois.
 
-### 8. O que fazer com a política contextual — **precisa de decisão**
+**Vídeo:** resolvido por bloco, com os quatro integrantes, em
+[`ROTEIRO-VIDEO.md`](ROTEIRO-VIDEO.md):
+
+| Bloco | Tempo | Quem |
+|---|---|---|
+| 1 — Problema e base | 0:00–1:10 | Doglas |
+| 2 — Modelo e políticas | 1:10–1:55 | Silvio |
+| 3 — Resultados e MLflow | 1:55–3:05 | Ricardo |
+| 4 — **A API rodando** | 3:05–4:35 | Mariana |
+
+A recomendação do roteiro é **gravar cada bloco separado e editar depois** — revezar ao vivo custa
+tempo em transição, e o limite de 5 minutos é rígido.
+
+### ~~8. O que fazer com a política contextual~~ — ✅ **RESOLVIDA: opção 1, reportar como está**
 
 A `LinTS` ficou em 12,41% no ambiente, **abaixo** da Thompson não-contextual (13,01%), com 59,5% de
 exploração ainda no fim das 20.000 rodadas. A causa está medida: o teto do ganho contextual é de
@@ -330,20 +343,32 @@ deixa de ser. Era exatamente essa a dúvida que a Fase 4 existia para resolver, 
 A implementação está validada — há teste que a coloca contra a Thompson num ambiente onde o braço
 ótimo depende do cliente, e lá ela vence. O problema é o dado, não o código.
 
-**Opções:**
-1. **Reportar como está** (recomendado, e agora com duas evidências independentes). "Medimos o teto,
-   implementamos, medimos o custo, não se paga" é resultado maduro. O enunciado não exige que o
-   contextual vença — exige que o adaptativo supere o baseline, o que já acontece com folga.
-2. **Reduzir a dimensão do contexto.** Menos features = menos parâmetros = convergência mais rápida.
-   Custa tempo e o teto continua sendo 4,44%, então o melhor caso é empatar com a Thompson.
-3. **Revisar o espaço de braços** para um em que a heterogeneidade seja maior. Reabre a Fase 1
-   inteira; não recomendo a esta altura.
+**Decisão: opção 1 — reportar como está.** As alternativas eram reduzir a dimensão do contexto
+(custa tempo, e o teto continua sendo 4,44%, então o melhor caso é empatar) ou revisar o espaço de
+braços (reabre a Fase 1 inteira). Nenhuma das duas mudaria a conclusão.
 
-⚠️ **Independente da escolha, as Fases 5 e 6 precisam de um placar contextual.** Se a recomendação
-exibida vier de uma política não-contextual, os 5 clientes do Golden Set recebem todos a mesma
-resposta, e a API ignora o payload — péssimo para a demo. A saída é servir o **ranking de `p̂` por
-braço** do ambiente calibrado, que varia por cliente (47% deles têm outro braço no topo). Isso é o
-*Direct Method*, não uma política de bandit, e o README precisa nomear a diferença.
+**Como ficou implementado.** A limitação virou material, não omissão:
+
+- A `LinTS` está na tabela de resultados do README e do relatório, em último entre as adaptativas,
+  com a explicação do porquê ao lado.
+- O **teto do ganho contextual foi medido antes** de a política ser implementada — decisão de
+  projeto que transforma o resultado fraco em previsão confirmada, não em surpresa.
+- Virou a hipótese **H2** dos documentos acadêmicos, declarada como hipótese de resultado negativo
+  e mantida após confirmada.
+- Ganhou seção própria no guia de estudo (*"Como sabemos que a LinTS não está quebrada"*) e uma
+  pergunta difícil preparada (*"O contextual não funcionou. Isso não é falha do projeto?"*).
+
+**Terceira evidência, posterior a esta decisão.** O `GradientBandit` — gradiente de política, o
+REINFORCE de horizonte 1 — empata com a Thompson não-contextual e vence a `LinTS`. Mais uma
+política sem contexto batendo a contextual, por um caminho algorítmico diferente. Reforça a mesma
+leitura: **o problema é o dado, não o código.**
+
+✅ **O placar contextual das Fases 5 e 6 foi resolvido como previsto aqui.** O risco era real: se a
+recomendação exibida viesse de uma política não-contextual, os 5 clientes do Golden Set receberiam
+todos a mesma resposta e a API ignoraria o payload — péssimo para a demo. A saída implementada foi
+servir o **ranking de `p̂` por braço** do ambiente calibrado, que varia por cliente (47% deles têm
+outro braço no topo). Isso é o *Direct Method*, não uma política de bandit, e o README nomeia a
+diferença.
 
 ---
 
@@ -353,7 +378,7 @@ braço** do ambiente calibrado, que varia por cliente (47% deles têm outro bra�
 |---|---|---|
 | Um braço domina globalmente | Bandit empata com baseline — **falha a Etapa 3** | Baseline em regra fixa; verificar heterogeneidade braço × contexto já na Fase 2 |
 | Células de braço com poucos eventos | Ambiente mal calibrado | Agregar `day_of_week` em janelas; piso de suporte por braço |
-| `euribor3m` domina o modelo | Acerto por calendário, não por cliente | Decisão em aberto #5 |
+| `euribor3m` domina o modelo | Acerto por calendário, não por cliente | Decisão #5, já fechada |
 | Ambiente calibrado soa fabricado | Perda nos 70% técnicos | É exatamente o que o track C responde, com evidência |
 | Confounding temporal em `contact` | Parte da diferença entre braços é época, não canal | Documentar como limitação no README |
 
@@ -415,7 +440,7 @@ make help    # lista todos os alvos
 ```
 
 `make train` e `make api` **ainda não funcionam** — dependem de código que não existe.
-Ver [decisão em aberto #2](#2-por-onde-começar).
+Ver [decisão #2](#2-por-onde-começar).
 
 Stack: Python 3.12, scikit-learn 1.9, pandas 2.3, MLflow 3.15, FastAPI 0.141. Versões pinadas em
 [`requirements.txt`](../requirements.txt), resolvidas a partir de uma instalação real.

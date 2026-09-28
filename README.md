@@ -3,7 +3,7 @@
 **Tech Challenge Fase 5 / Datathon — POSTECH MLET**
 
 > **Entrando no projeto agora?** Comece por [`docs/BRIEFING.md`](docs/BRIEFING.md) — contexto,
-> decisões tomadas com o racional, decisões em aberto e referências de estudo.
+> decisões tomadas com o racional e referências de estudo.
 > Plano de execução em [`docs/PLANO.md`](docs/PLANO.md).
 
 ---

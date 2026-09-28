@@ -26,6 +26,34 @@ Próxima: **Fase 8** — gravar o vídeo pitch. Fica com a Mariana.
 - `.gitignore` passa a cobrir `.~lock.*#`, os arquivos de trava que o LibreOffice cria ao lado dos
   `.docx` de `docs/`.
 
+### Alterado — as nove decisões do briefing estão fechadas
+- **Decisão #7 (divisão de trabalho e vídeo)** — fechada descrevendo o que foi feito: Doglas na
+  Fase 1, Mariana nas Fases 0 e 2 a 7, e o vídeo dividido por bloco entre os quatro integrantes,
+  com a tabela de atribuição que o `ROTEIRO-VIDEO.md` já trazia.
+- **Decisão #8 (política contextual)** — fechada como **opção 1, reportar como está**, listando
+  onde a limitação virou material: tabela de resultados, teto medido antes da implementação,
+  hipótese H2 dos documentos acadêmicos, seção do guia e pergunta difícil preparada. Registra
+  também a terceira evidência, posterior à decisão: o `GradientBandit` vence a `LinTS` por caminho
+  algorítmico diferente.
+- O aviso sobre "as Fases 5 e 6 precisam de um placar contextual" virou registro de risco
+  **materializado e resolvido** — a saída implementada foi servir o ranking de `p̂` por braço do
+  ambiente calibrado, nomeando no README que isso é *Direct Method* e não política de bandit.
+- Título da seção 5 deixa de ser "Decisões em aberto"; os dois links internos que apontavam para
+  a âncora antiga foram ajustados junto, senão quebrariam.
+
+### Corrigido — documentação que descrevia um projeto de semanas atrás
+- `docs/PLANO.md` tinha **cinco itens da Fase 0 desmarcados** — `git init`, `.gitignore`,
+  `requirements.txt`, `Makefile` e esqueleto do README — todos concluídos desde o começo. O nome do
+  repositório ali ainda era o placeholder `datathon-7mlet-grupo-XX`, quando a decisão #3 fixou
+  `datathon-8mlet-grupo-30`. Resta **um** checkbox vazio, o de gravar o vídeo, legitimamente aberto.
+- `docs/BRIEFING.md`, seção 2, dizia "Fases 0 a 4 de 8", 144 testes e *"`api/` continua vazio, o
+  Golden Set ainda não existe"*. Quem entrasse no projeto por ele leria um retrato defasado de um
+  projeto completo. Reescrita com as Fases 5, 6 e 7 e a contagem real.
+- Cabeçalho do briefing prometia explicar "o que ainda precisa ser decidido" — não há mais nada.
+- `README.md`: `make test` dizia 189 e são 198; a árvore não listava o gradient bandit em
+  `policies.py`, nem `ROTEIRO-VIDEO.md` e o deck, ambos já versionados; a introdução está em 16
+  páginas desde a subseção 2.2.4.
+
 ### Corrigido — paráfrase minha do enunciado, apresentada como se fosse o texto dele
 - `README.md`, `CLAUDE.md` e `docs/BRIEFING.md` diziam que **"o README precisa cobrir base legal,
   finalidade, minimização, retenção e humano no loop"**, como se os cinco fossem exigência de

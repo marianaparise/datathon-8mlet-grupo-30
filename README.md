@@ -507,7 +507,7 @@ make data    # baixa a base do Kaggle para data/raw/
 make train   # roda o experimento ponta a ponta e serializa os artefatos
 make api     # sobe a API em http://localhost:8000/docs   (Fase 6)
 make mlflow  # abre a UI do MLflow em http://localhost:5000
-make test    # roda a suíte de testes — 189 no total
+make test    # roda a suíte de testes — 198 no total
 make lint    # checa estilo e erros estáticos com ruff
 ```
 
@@ -840,7 +840,7 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 │   ├── eda.py            # agregações, intervalos de Wilson e figuras da análise
 │   ├── arms.py           # espaço de braços, mistura histórica, melhor braço
 │   ├── environment.py    # P(y | contexto, braço) calibrado + portões de qualidade
-│   ├── policies.py       # baseline, ε-greedy, UCB1, Thompson, LinTS
+│   ├── policies.py       # baseline, ε-greedy, UCB1, Thompson, gradient bandit, LinTS
 │   ├── evaluation.py     # protocolo de ambiente, runner multi-seed, métricas, MLflow
 │   ├── replay.py         # rejection sampling, IPS e comparação entre os dois tracks
 │   ├── scenarios.py      # análise de sensibilidade temporal e confounding de canal
@@ -860,9 +860,11 @@ Registradas desde já, porque condicionam a leitura de qualquer resultado:
 ├── docs/
 │   ├── PLANO.md          # plano de implementação em 8 fases
 │   ├── BRIEFING.md       # contexto e decisões, para quem entra no projeto
-│   ├── DEMO.md           # roteiro da demonstração do vídeo
+│   ├── DEMO.md           # requisições da demo, com as saídas capturadas
+│   ├── ROTEIRO-VIDEO.md  # narração do vídeo, cronometrada
+│   ├── Apresentacao-TC5-Grupo30.pptx               # deck de ensaio
 │   ├── Relatorio-Tecnico-TC5-Grupo30.docx          # relatório, 15 páginas
-│   ├── Introducao-Fundamentacao-TC5-Grupo30.docx   # introdução ampliada, 15 páginas
+│   ├── Introducao-Fundamentacao-TC5-Grupo30.docx   # introdução ampliada, 16 páginas
 │   └── Guia-de-Estudo-TC5-Grupo30.docx             # material interno do grupo
 ├── CLAUDE.md             # regras e decisões do projeto
 └── CHANGELOG.md          # histórico de modificações

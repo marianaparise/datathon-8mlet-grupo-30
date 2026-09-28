@@ -54,8 +54,9 @@ modelo superando baseline, MLflow, demo funcionando).
 
 ## 2. Onde estamos
 
-**Fases 0 a 4 de 8 concluídas.** Plano completo em [`PLANO.md`](PLANO.md).
-Etapas 0, 1, 2, 3 e 7 do enunciado entregues, com a estratégia de avaliação A+C fechada.
+**Fases 0 a 7 de 8 concluídas.** Plano completo em [`PLANO.md`](PLANO.md).
+**Etapas 0 a 7 do enunciado entregues.** Falta o vídeo pitch (Etapa 8). A estratégia de avaliação
+A+C está fechada e executada nas duas trilhas.
 
 ✅ **Fase 0** — estrutura, `requirements.txt` validado com instalação real, `Makefile`, `.gitignore`,
 regras em [`CLAUDE.md`](../CLAUDE.md). `make data` roda sem credencial, com checksum.
@@ -67,12 +68,12 @@ regras em [`CLAUDE.md`](../CLAUDE.md). `make data` roda sem credencial, com chec
 Brier **0,0860**, desvio máximo por braço de **0,96 p.p.**, AUC 0,7413 contra 0,7274 da logística,
 e diagnóstico de sobreposição.
 
-✅ **Fase 3** — `src/policies.py`, `src/evaluation.py`, `train.py`. Seis políticas, 20.000 rodadas
-× 10 seeds, 88 runs no MLflow.
+✅ **Fase 3** — `src/policies.py`, `src/evaluation.py`, `train.py`. Sete classes de política em
+**oito configurações** (a Thompson entra com dois priors), 20.000 rodadas × 10 seeds, 88 runs no
+MLflow.
 
 ✅ **Fase 4** — `src/replay.py`. Rejection sampling com IPS sobre o log real. **Spearman = 0,857**
 entre os rankings dos dois tracks: o ambiente calibrado não está inventando a ordem.
-**144 testes no total.**
 
 ⚠️ **A Fase 4 também revelou a limitação principal do projeto.** A vantagem do celular sobre o
 telefone fixo é **inflada 9,4x** pelo confounding temporal: +181,7% na base completa contra +19,3%
@@ -80,7 +81,17 @@ dentro da janela em que os dois canais rodaram lado a lado. Consequência: o upl
 que o efeito de canal seja causal; sob leitura conservadora fica em **+8% a +9%**. Está documentado
 com número no README, e é o material mais forte da seção de limitações.
 
-❌ `api/` continua vazio. O Golden Set (Fase 5) ainda não existe.
+✅ **Fase 5** — `src/golden_set.py`. Os cinco casos da Etapa 4, escolhidos por critério e não
+sorteados, com `is_tie` marcando os empates em vez de vender desempate numérico como preferência.
+
+✅ **Fase 6** — `api/` com FastAPI (`/recommend`, `/health`, `/arms`), validação por `Literal` que
+recusa categoria desconhecida com 422, e Dockerfile multi-stage.
+
+✅ **Fase 7** — README consolidado e arquitetura-alvo em Terraform (`infra/`, não aplicada).
+**198 testes no total**, `make refs` auditando as 33 referências citadas.
+
+❌ **Fase 8 — o vídeo pitch.** É o que falta. Roteiro cronometrado em
+[`ROTEIRO-VIDEO.md`](ROTEIRO-VIDEO.md) e requisições prontas em [`DEMO.md`](DEMO.md).
 
 ### O requisito da Etapa 3 está cumprido
 

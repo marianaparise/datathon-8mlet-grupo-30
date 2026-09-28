@@ -18,7 +18,6 @@ O grupo tem quatro integrantes e o vídeo tem cinco blocos. Sugestão:
 | 2 — Modelo e políticas | 1:10–1:55 | **Silvio** |
 | 3 — Resultados e MLflow | 1:55–3:05 | **Ricardo** |
 | 4 — **A API rodando** | 3:05–4:35 | **Mariana** |
-| 5 — Fechamento | 4:35–4:50 | **Silvio** |
 
 Gravando sozinho, ignore a coluna "quem" e leia direto. Gravando em quatro, **grave cada bloco
 separado e edite depois** — tentar revezar ao vivo custa tempo em transição, e o limite é rígido.
